@@ -1,0 +1,304 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'manager' | 'user';
+}
+
+export interface Customer {
+  id: string;
+  company: string;
+  contactName: string;
+  email: string;
+  phone: string;
+  status: 'Lead' | 'Active' | 'Inactive';
+  notes?: string;
+  createdAt: string;
+}
+
+export interface Email {
+  id: string;
+  customerId?: string;
+  senderName: string;
+  senderEmail: string;
+  subject: string;
+  body: string;
+  date: string;
+  unread: boolean;
+  starred: boolean;
+  archived: boolean;
+  spam: boolean;
+  deleted: boolean;
+  priority: 'High' | 'Medium' | 'Low';
+  category: 'RFQ' | 'Quotation' | 'Purchase Order' | 'Invoice' | 'Drawing' | 'Complaint' | 'Meeting' | 'Reminder' | 'Approval' | 'Information' | 'General';
+  aiAnalysis?: AiAnalysis;
+  threadId?: string;
+  attachments?: Attachment[];
+}
+
+export interface AiAnalysis {
+  id: string;
+  emailId: string;
+  customerName: string;
+  company: string;
+  project: string;
+  subject: string;
+  priority: 'High' | 'Medium' | 'Low';
+  deadline?: string;
+  taskType: string;
+  requiredAction: string;
+  riskLevel: 'High' | 'Medium' | 'Low';
+  waitingFor?: string;
+  nextAction: string;
+  confidenceScore: number;
+  aiSummary: string;
+  sentiment: 'Positive' | 'Neutral' | 'Negative';
+  category: string;
+}
+
+export interface Attachment {
+  id: string;
+  emailId: string;
+  fileName: string;
+  fileType: string;
+  fileSize: string;
+  fileUrl: string;
+  projectId?: string;
+  customerId?: string;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  customerId: string;
+  description: string;
+  status: 'Planning' | 'Active' | 'OnHold' | 'Completed';
+  progress: number;
+  startDate: string;
+  endDate: string;
+  budget?: number;
+  code: string;
+}
+
+export interface TaskChecklistItem {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  customerId?: string;
+  projectId?: string;
+  priority: 'High' | 'Medium' | 'Low';
+  status: 'Pending' | 'In Progress' | 'Waiting' | 'Completed' | 'Cancelled';
+  dueDate: string;
+  reminder?: string;
+  assignedTo?: string;
+  estimatedHours?: number;
+  actualHours?: number;
+  emailId?: string;
+  notes?: string;
+  checklist: TaskChecklistItem[];
+  tags: string[];
+  createdAt: string;
+}
+
+export interface Note {
+  id: string;
+  title: string;
+  content: string;
+  customerId?: string;
+  projectId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Activity {
+  id: string;
+  type: 'email' | 'task' | 'project' | 'customer' | 'system';
+  title: string;
+  description: string;
+  refId?: string;
+  timestamp: string;
+}
+
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'Email' | 'Task' | 'Alert';
+  status: 'Unread' | 'Read';
+  createdAt: string;
+}
+
+export interface Meeting {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  duration: number; // in minutes
+  customerId?: string;
+  projectId?: string;
+  type: 'Call' | 'Review' | 'FollowUp' | 'Meeting';
+  status: 'Scheduled' | 'Completed';
+}
+
+export interface FileItem {
+  id: string;
+  name: string;
+  size: string;
+  type: 'PDF' | 'CAD' | 'STEP' | 'Image' | 'Excel' | 'ZIP' | 'Other';
+  customerId?: string;
+  projectId?: string;
+  path: string;
+  uploadedAt: string;
+}
+
+export interface AutomationWorkflow {
+  id: string;
+  name: string;
+  description: string;
+  active: boolean;
+  trigger: 'New Email' | 'Task Completed' | 'Customer Created' | 'Manual';
+  actions: {
+    type: 'Create Task' | 'Send Notification' | 'Update Status' | 'AI Summary';
+    config: Record<string, any>;
+  }[];
+  lastTriggeredAt?: string;
+}
+
+export interface SystemLog {
+  id: string;
+  level: 'info' | 'warn' | 'error';
+  message: string;
+  timestamp: string;
+}
+
+export interface DashboardStats {
+  todayTasks: number;
+  pendingTasks: number;
+  completedTasks: number;
+  overdueTasks: number;
+  highPriorityTasks: number;
+  upcomingDeadlines: number;
+  waitingReplies: number;
+  recentEmailsCount: number;
+}
+
+export interface Rfq {
+  id: string;
+  rfqNumber: string;
+  customerId: string;
+  projectId?: string;
+  title: string;
+  status: 'Pending' | 'Quoted' | 'Approved' | 'Rejected';
+  estimatedValue: number;
+  targetDeliveryDate: string;
+  drawingRef?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface Drawing {
+  id: string;
+  drawingNumber: string;
+  title: string;
+  customerId: string;
+  projectId?: string;
+  revision: string;
+  status: 'In Review' | 'Approved' | 'Released' | 'Rejected';
+  fileType: 'STEP' | 'IGES' | 'Creo' | 'SolidWorks' | 'DXF' | 'PDF';
+  fileName: string;
+  fileSize: string;
+  approvedBy?: string;
+  approvalDate?: string;
+  approvalNotes?: string;
+  updatedAt: string;
+}
+
+export interface Quotation {
+  id: string;
+  quoteNumber: string;
+  rfqId: string;
+  customerId: string;
+  projectId?: string;
+  amount: number;
+  status: 'Draft' | 'Sent' | 'Accepted' | 'Declined';
+  validUntil: string;
+  terms?: string;
+  createdAt: string;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  poNumber: string;
+  quoteId: string;
+  customerId: string;
+  projectId?: string;
+  amount: number;
+  status: 'Received' | 'In Production' | 'Shipped' | 'Invoiced';
+  issueDate: string;
+  deliveryDate: string;
+  fileUrl?: string;
+  createdAt: string;
+}
+
+export interface Invoice {
+  id: string;
+  invoiceNumber: string;
+  poId?: string;
+  customerId: string;
+  projectId?: string;
+  amount: number;
+  status: 'Draft' | 'Sent' | 'Paid' | 'Overdue';
+  issueDate: string;
+  dueDate: string;
+  createdAt: string;
+}
+
+export interface DrawingRevision {
+  id: string;
+  drawingId: string;
+  revision: string;
+  description: string;
+  engineer: string;
+  date: string;
+  fileUrl?: string;
+}
+
+export interface Ecr {
+  id: string;
+  ecrNumber: string;
+  title: string;
+  description: string;
+  reason: string;
+  priority: 'Low' | 'Medium' | 'High' | 'Critical';
+  status: 'Draft' | 'In Review' | 'Approved' | 'Implemented' | 'Cancelled';
+  customerId: string;
+  projectId?: string;
+  affectedDrawings: string[];
+  requestedBy: string;
+  createdAt: string;
+}
+
+export interface EmailThread {
+  id: string;
+  subject: string;
+  emails: Email[];
+  latestSenderName: string;
+  latestSenderEmail: string;
+  lastReplyDate: string;
+  status: 'Reply Required' | 'Waiting on Customer' | 'Under Review' | 'Resolved';
+  customerId?: string;
+  projectId?: string;
+  priority: 'High' | 'Medium' | 'Low';
+}
+

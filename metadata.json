@@ -1,0 +1,6 @@
+{
+  "name": "Work OS",
+  "description": "An AI-powered work management system that automatically syncs emails, manages tasks, projects, customers, and automations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
