@@ -13,6 +13,14 @@
   "folders": [],
   "automations": [],
   "logs": [],
+  "rfqs": [],
+  "drawings": [],
+  "quotations": [],
+  "purchaseOrders": [],
+  "invoices": [],
+  "revisions": [],
+  "ecrs": [],
+  "userSessions": [],
   "auditLogs": [],
   "mailAccounts": [],
   "rolePermissions": [
@@ -75,67 +83,60 @@
       "id": "gmail",
       "name": "Gmail",
       "category": "email",
-      "description": "Connect using secure Google OAuth 2.0 to access, sync, and reply to your corporate Gmail mailboxes."
+      "description": "Connect using secure Google OAuth 2.0 to access and sync Gmail mailboxes."
     },
     {
       "id": "yahoo",
       "name": "Yahoo Mail",
       "category": "email",
-      "description": "Sync your business mailboxes using generic IMAP/SMTP or custom App Password credentials."
+      "description": "Sync business mailboxes using IMAP/SMTP or app password credentials."
     },
     {
       "id": "outlook",
       "name": "Outlook",
       "category": "email",
-      "description": "Authenticate using Microsoft Graph API to access mail, calendar events, and contacts."
+      "description": "Authenticate using Microsoft Graph API for mail, calendar, and contacts."
     },
     {
       "id": "m365",
       "name": "Microsoft 365",
       "category": "email",
-      "description": "Enterprise suite authentication for Azure AD / Microsoft 365 services."
+      "description": "Enterprise authentication for Azure AD and Microsoft 365 services."
     },
     {
       "id": "gdrive",
       "name": "Google Drive",
       "category": "storage",
-      "description": "Browse Google Drive directories, download drawings, and synchronize project vaults."
+      "description": "Synchronize project vault files with Google Drive."
     },
     {
       "id": "gemini",
       "name": "Gemini AI",
       "category": "ai",
-      "description": "Secure enterprise connection using Gemini API Keys to run automated email triage and minutes compilation."
+      "description": "Run automated triage and assistant workflows with Gemini API keys."
     },
     {
       "id": "telegram",
       "name": "Telegram",
       "category": "chat",
-      "description": "Automated notification relay dispatching critical alerts to active group threads using Bot Tokens."
+      "description": "Relay critical alerts through Telegram Bot API."
     },
     {
       "id": "whatsapp",
       "name": "WhatsApp",
       "category": "chat",
-      "description": "Business messaging endpoint architecture for real-time customer support pipelines."
+      "description": "Business messaging hooks for customer support pipelines."
     },
     {
       "id": "supabase",
       "name": "Supabase",
       "category": "database",
-      "description": "Connect directly to your relational PostgreSQL storage, storage buckets, and realtime queues."
-    },
-    {
-      "id": "future",
-      "name": "Future APIs",
-      "category": "other",
-      "description": "Reserved hooks for custom Zoho, Proton, and Active Exchange Server integrations."
+      "description": "Connect PostgreSQL storage, buckets, and realtime queues."
     }
   ],
   "serviceConnections": [],
   "oauthTokens": [],
   "providerSettings": [],
   "syncLogs": [],
-  "integrationErrors": [],
-  "lastSystemScan": ""
+  "integrationErrors": []
 }

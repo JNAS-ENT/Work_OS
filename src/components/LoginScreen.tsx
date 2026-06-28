@@ -404,7 +404,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                       type="email"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
-                      placeholder="alex.eng@workos.com"
+                      placeholder="user@company.com"
                       className="w-full bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl py-2.5 pl-11 pr-4 text-xs text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                       required
                     />
@@ -482,7 +482,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                       type="email"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
-                      placeholder="shaikh.jnas@gmail.com"
+                      placeholder="admin@company.com"
                       className="w-full bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl py-2.5 pl-11 pr-4 text-xs text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                       required
                     />
