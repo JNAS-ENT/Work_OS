@@ -17,6 +17,14 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const [isRegistering, setIsRegistering] = useState(false);
   const [isRecovering, setIsRecovering] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [authStatus, setAuthStatus] = useState<{ configured: boolean; provider: string } | null>(null);
+
+  React.useEffect(() => {
+    fetch('/api/auth/status')
+      .then(r => r.json())
+      .then(data => setAuthStatus(data))
+      .catch(() => setAuthStatus({ configured: false, provider: 'Unknown' }));
+  }, []);
 
   // Form Fields
   const [email, setEmail] = useState('');
@@ -485,6 +493,18 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                 <h2 className="text-lg font-bold text-white">Central Operations Entry</h2>
                 <p className="text-xs text-slate-400">Input your enterprise email and credentials to load databases</p>
               </div>
+
+              {authStatus && !authStatus.configured && (
+                <div className="p-4 bg-amber-950/25 border border-amber-800/45 rounded-2xl flex items-start gap-3">
+                  <ShieldCheck className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-amber-400 uppercase tracking-wider">Authentication Provider Not Configured</p>
+                    <p className="text-[11px] text-slate-300 leading-relaxed font-normal">
+                      Enterprise Identity Core requires active configuration. No Supabase URL or local JWT credentials detected. Sandbox fallback is active.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <form onSubmit={handleLoginSubmit} className="space-y-4">
                 {errorMsg && (

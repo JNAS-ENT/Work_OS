@@ -11,9 +11,19 @@ import {
   Rfq, Drawing, Quotation, PurchaseOrder, Invoice, DrawingRevision, Ecr,
   UserSession, AuditLog, MailAccount, RolePermission, User
 } from './src/types';
+import filesVaultRouter from './server/files_vault';
+import calendarMeetingsRouter from './server/calendar_meetings';
+import integrationsRouter from './server/integrations_router';
+import { databaseService } from './server/database/DatabaseService';
+import { authService } from './server/services/AuthService';
 
 const app = express();
 app.use(express.json());
+
+// Mount Modular API Routers
+app.use('/api', filesVaultRouter);
+app.use('/api', calendarMeetingsRouter);
+app.use('/api', integrationsRouter);
 
 // ==========================================
 // LIGHTWEIGHT AUTOMATION ENGINE (n8n Replica)
@@ -190,6 +200,18 @@ async function runAutomationPipeline(trigger: string, payload: any) {
 // ==========================================
 // ENTERPRISE AUTHENTICATION & MULTI-USER APIs
 // ==========================================
+
+// Get Auth Status
+app.get('/api/auth/status', (req, res) => {
+  const configured = authService.isAuthProviderConfigured();
+  res.json({
+    configured,
+    provider: process.env.SUPABASE_URL ? 'Supabase' : 'Local JWT',
+    details: configured 
+      ? 'Secure authentication provider initialized and connected.' 
+      : 'Authentication Provider Not Configured. Please configure SUPABASE_URL in settings.'
+  });
+});
 
 // Register Account
 app.post('/api/auth/register', (req, res) => {
@@ -1851,6 +1873,9 @@ app.post('/api/notifications/read-all', (req, res) => {
 // ==========================================
 async function startServer() {
   const PORT = 3000;
+  
+  // Initialize dynamic database connection
+  await databaseService.initialize();
   
   // Serve dynamic Vite development assets when in dev mode
   if (process.env.NODE_ENV !== 'production') {

@@ -34,9 +34,12 @@ export default function SystemLogs() {
   };
 
   const filteredLogs = logs.filter(log => {
-    const matchesLevel = levelFilter === 'ALL' || log.level === levelFilter;
-    const matchesSearch = log.message.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          log.context.toLowerCase().includes(searchQuery.toLowerCase());
+    const logLvlUpper = (log.level || 'info').toUpperCase();
+    // Support matching 'WARN' under 'ERROR' filter or just match exactly, or treat 'WARN' as INFO/ALL.
+    // Let's match exactly.
+    const matchesLevel = levelFilter === 'ALL' || logLvlUpper === levelFilter || (levelFilter === 'ERROR' && logLvlUpper === 'WARN');
+    const matchesSearch = (log.message || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          (log.context && String(log.context).toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesLevel && matchesSearch;
   });
 
@@ -99,16 +102,20 @@ export default function SystemLogs() {
       <div className="flex-1 overflow-y-auto p-4 space-y-2 text-[11px] leading-relaxed">
         {filteredLogs.length > 0 ? (
           filteredLogs.map((log, idx) => {
+            const levelUpper = (log.level || 'info').toUpperCase();
             let color = 'text-gray-300';
-            if (log.level === 'ERROR') color = 'text-red-400 font-bold';
-            if (log.level === 'DEBUG') color = 'text-purple-400';
-            if (log.level === 'INFO') color = 'text-blue-300';
+            if (levelUpper === 'ERROR') color = 'text-rose-400 font-bold';
+            if (levelUpper === 'WARN') color = 'text-amber-400 font-bold';
+            if (levelUpper === 'DEBUG') color = 'text-purple-400';
+            if (levelUpper === 'INFO') color = 'text-blue-400';
+
+            const contextText = log.context || 'core';
 
             return (
               <div key={log.id || idx} className="flex gap-2.5 items-start group hover:bg-gray-900/40 px-2 py-1 rounded transition">
                 <span className="text-gray-600 select-none shrink-0 font-bold">[{new Date(log.timestamp).toLocaleTimeString([], { hour12: false })}]</span>
-                <span className={`shrink-0 font-bold uppercase text-[10px] w-12 ${color}`}>{log.level}</span>
-                <span className="text-gray-500 shrink-0 select-none">[{log.context}]</span>
+                <span className={`shrink-0 font-bold uppercase text-[10px] w-12 ${color}`}>{levelUpper}</span>
+                <span className="text-gray-500 shrink-0 select-none uppercase">[{contextText}]</span>
                 <span className="flex-1 text-gray-200 break-all">{log.message}</span>
               </div>
             );

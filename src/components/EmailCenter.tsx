@@ -424,8 +424,53 @@ export default function EmailCenter({
         </div>
       </div>
 
-      {/* Email listing grid (4 cols) */}
-      <div className="lg:col-span-4 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full bg-white dark:bg-slate-900" id="email-threads-listing">
+      {mailAccounts.length === 0 ? (
+        <div className="lg:col-span-10 flex flex-col items-center justify-center p-12 text-center bg-slate-50/10 dark:bg-slate-950/10 space-y-6 h-full min-h-[400px]">
+          <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800/50 border border-slate-200/50 dark:border-slate-700/50 rounded-2xl flex items-center justify-center text-slate-400 dark:text-slate-500 shadow-xs">
+            <Mail className="h-8 w-8 text-slate-400 dark:text-slate-500" />
+          </div>
+          <div className="max-w-md space-y-2">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">No Email Account Connected</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              Integrate your business communication suite to initiate real-time AI email categorization, auto-create customer cards, and run automated n8n workflows.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
+            <button 
+              onClick={() => { setShowAccountManager(true); setNewAccProvider('gmail'); }}
+              className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition cursor-pointer flex items-center justify-center gap-2"
+            >
+              <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+              Connect Gmail
+            </button>
+            <button 
+              onClick={() => { setShowAccountManager(true); setNewAccProvider('outlook'); }}
+              className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition cursor-pointer flex items-center justify-center gap-2"
+            >
+              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+              Connect Outlook
+            </button>
+            <button 
+              onClick={() => { setShowAccountManager(true); setNewAccProvider('yahoo'); }}
+              className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition cursor-pointer flex items-center justify-center gap-2"
+            >
+              <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+              Connect Yahoo
+            </button>
+            <button 
+              onClick={() => { setShowAccountManager(true); setNewAccProvider('imap'); }}
+              className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition cursor-pointer flex items-center justify-center gap-2"
+            >
+              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+              Connect IMAP
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Email listing grid (4 cols) */}
+          <div className="lg:col-span-4 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full bg-white dark:bg-slate-900" id="email-threads-listing">
         {/* Search header */}
         <div className="p-3 border-b border-slate-100 dark:border-slate-800/80 flex items-center gap-2">
           <div className="relative flex-1">
@@ -960,6 +1005,9 @@ export default function EmailCenter({
           </div>
         )}
       </div>
+
+      </>
+      )}
 
       {/* ==========================================
           RICH EMAIL COMPOSER MODAL (Modules 3, 4, 5)

@@ -169,6 +169,21 @@ export interface Meeting {
   projectId?: string;
   type: 'Call' | 'Review' | 'FollowUp' | 'Meeting';
   status: 'Scheduled' | 'Completed';
+  calendarId?: string; // 'google' | 'outlook' | 'local'
+  attendees?: string[];
+  notes?: string;
+  aiMinutes?: string;
+  actionItemsExtracted?: boolean;
+}
+
+export interface Folder {
+  id: string;
+  name: string;
+  parentFolderId?: string | null;
+  customerId?: string;
+  projectId?: string;
+  provider: 'local' | 'gdrive' | 'onedrive';
+  createdAt: string;
 }
 
 export interface FileItem {
@@ -178,8 +193,15 @@ export interface FileItem {
   type: 'PDF' | 'CAD' | 'STEP' | 'Image' | 'Excel' | 'ZIP' | 'Other';
   customerId?: string;
   projectId?: string;
+  folderId?: string | null;
   path: string;
   uploadedAt: string;
+  provider?: 'local' | 'gdrive' | 'onedrive';
+  hash?: string;
+  sharedUrl?: string;
+  ocrText?: string;
+  aiSummary?: string;
+  aiTags?: string[];
 }
 
 export interface AutomationWorkflow {
@@ -377,4 +399,64 @@ export interface RolePermission {
   roleName: 'admin' | 'manager' | 'user' | 'viewer' | 'guest';
   permissions: string[]; // list of permissions like 'view_logs', 'delete_task', etc.
 }
+
+// Enterprise Integration Center Schema
+export interface ServiceProvider {
+  id: 'gmail' | 'yahoo' | 'outlook' | 'm365' | 'gdrive' | 'gemini' | 'telegram' | 'whatsapp' | 'supabase' | 'future';
+  name: string;
+  category: 'email' | 'storage' | 'ai' | 'chat' | 'database' | 'other';
+  description: string;
+  logo?: string;
+}
+
+export interface ServiceConnection {
+  id: string;
+  providerId: 'gmail' | 'yahoo' | 'outlook' | 'm365' | 'gdrive' | 'gemini' | 'telegram' | 'whatsapp' | 'supabase' | 'future';
+  name: string;
+  email?: string;
+  status: 'Connected' | 'Disconnected';
+  health: 'Healthy' | 'Unhealthy' | 'Not Configured';
+  lastSyncAt?: string;
+  lastError?: string;
+  storageUsed?: string;
+  syncPaused?: boolean;
+  createdAt: string;
+}
+
+export interface OAuthToken {
+  id: string;
+  connectionId: string;
+  encryptedAccessToken: string;
+  encryptedRefreshToken?: string;
+  expiresAt?: string; // ISO String
+}
+
+export interface ProviderSetting {
+  id: string;
+  connectionId: string;
+  key: string;
+  value: string;
+}
+
+export interface SyncLog {
+  id: string;
+  connectionId: string;
+  timestamp: string;
+  type: 'manual' | 'auto' | 'background';
+  status: 'success' | 'failed';
+  details: string;
+  durationMs: number;
+  itemsSynced: number;
+}
+
+export interface IntegrationError {
+  id: string;
+  connectionId?: string;
+  providerId: string;
+  timestamp: string;
+  code: string;
+  message: string;
+  severity: 'high' | 'medium' | 'low';
+}
+
 
