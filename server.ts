@@ -4,11 +4,12 @@ import { createServer as createViteServer } from 'vite';
 import { 
   readDb, writeDb, logActivity, createNotification, logSystem 
 } from './server/db';
-import { analyzeEmailWithGemini, getAiAssistantReply } from './server/ai';
+import { analyzeEmailWithGemini, getAiAssistantReply, getAiReplySuggestion } from './server/ai';
 import { 
   Customer, Email, Project, Task, Note, 
   Meeting, FileItem, AutomationWorkflow, AiAnalysis, Attachment,
-  Rfq, Drawing, Quotation, PurchaseOrder, Invoice, DrawingRevision, Ecr
+  Rfq, Drawing, Quotation, PurchaseOrder, Invoice, DrawingRevision, Ecr,
+  UserSession, AuditLog, MailAccount, RolePermission, User
 } from './src/types';
 
 const app = express();
@@ -185,6 +186,579 @@ async function runAutomationPipeline(trigger: string, payload: any) {
 // ==========================================
 // REST API ENDPOINTS
 // ==========================================
+
+// ==========================================
+// ENTERPRISE AUTHENTICATION & MULTI-USER APIs
+// ==========================================
+
+// Register Account
+app.post('/api/auth/register', (req, res) => {
+  const { name, email, password, role } = req.body;
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: 'Name, email, and password are required.' });
+  }
+
+  const db = readDb();
+  const exists = db.users.some(u => u.email.toLowerCase() === email.toLowerCase());
+  if (exists) {
+    return res.status(400).json({ error: 'A corporate profile with this email already exists.' });
+  }
+
+  const newUser: User = {
+    id: `usr_${Date.now()}`,
+    name,
+    email,
+    role: role || 'user',
+    password, 
+    status: 'Active',
+    company: 'Geometric Suite',
+    timezone: 'UTC',
+    language: 'English',
+    themePreference: 'dark',
+    createdAt: new Date().toISOString(),
+    connectedMailAccounts: []
+  };
+
+  db.users.push(newUser);
+
+  // Add Audit Log
+  const audit: AuditLog = {
+    id: `aud_${Date.now()}`,
+    userId: newUser.id,
+    userName: newUser.name,
+    action: 'REGISTER',
+    details: `Corporate user profile registered for ${newUser.name} with requested role: ${newUser.role}.`,
+    ipAddress: req.ip || '127.0.0.1',
+    device: req.headers['user-agent'] || 'Web Browser',
+    timestamp: new Date().toISOString()
+  };
+  db.auditLogs.unshift(audit);
+
+  writeDb(db);
+
+  const { password: _, ...userWithoutPassword } = newUser;
+  res.json(userWithoutPassword);
+});
+
+// Login
+app.post('/api/auth/login', (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required.' });
+  }
+
+  const db = readDb();
+  const userIndex = db.users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+  
+  if (userIndex === -1) {
+    const audit: AuditLog = {
+      id: `aud_${Date.now()}`,
+      action: 'FAILED_LOGIN',
+      details: `Failed login attempt for unknown email: "${email}".`,
+      ipAddress: req.ip || '127.0.0.1',
+      device: req.headers['user-agent'] || 'Web Browser',
+      timestamp: new Date().toISOString()
+    };
+    db.auditLogs.unshift(audit);
+    writeDb(db);
+    return res.status(401).json({ error: 'Invalid corporate credentials.' });
+  }
+
+  const user = db.users[userIndex];
+
+  if (user.status === 'Locked') {
+    return res.status(403).json({ error: 'This account has been locked due to security violations or multiple failed password attempts.' });
+  }
+
+  if (user.password !== password) {
+    user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+    let errorMsg = 'Invalid corporate credentials.';
+    
+    if (user.failedLoginAttempts >= 5) {
+      user.status = 'Locked';
+      errorMsg = 'Account locked due to 5 consecutive failed login attempts.';
+    }
+
+    db.users[userIndex] = user;
+
+    const audit: AuditLog = {
+      id: `aud_${Date.now()}`,
+      userId: user.id,
+      userName: user.name,
+      action: 'FAILED_LOGIN',
+      details: `Failed password attempt for user ${user.email}. Attempt #${user.failedLoginAttempts}.`,
+      ipAddress: req.ip || '127.0.0.1',
+      device: req.headers['user-agent'] || 'Web Browser',
+      timestamp: new Date().toISOString()
+    };
+    db.auditLogs.unshift(audit);
+    writeDb(db);
+
+    return res.status(401).json({ error: errorMsg });
+  }
+
+  user.failedLoginAttempts = 0;
+  db.users[userIndex] = user;
+
+  const newSession: UserSession = {
+    id: `sess_${Date.now()}`,
+    userId: user.id,
+    device: req.headers['user-agent'] || 'Corporate Device',
+    browser: req.headers['user-agent']?.includes('Chrome') ? 'Google Chrome' : 'Web Browser',
+    ipAddress: req.ip || '127.0.0.1',
+    loginTime: new Date().toISOString(),
+    lastActiveTime: new Date().toISOString(),
+    status: 'Active'
+  };
+  db.userSessions.unshift(newSession);
+
+  const audit: AuditLog = {
+    id: `aud_${Date.now()}`,
+    userId: user.id,
+    userName: user.name,
+    action: 'LOGIN',
+    details: `User ${user.name} logged in successfully on ${newSession.device}.`,
+    ipAddress: newSession.ipAddress,
+    device: newSession.device,
+    timestamp: new Date().toISOString()
+  };
+  db.auditLogs.unshift(audit);
+
+  writeDb(db);
+
+  const { password: _, ...userWithoutPassword } = user;
+  res.json({
+    user: userWithoutPassword,
+    sessionToken: newSession.id
+  });
+});
+
+// Logout
+app.post('/api/auth/logout', (req, res) => {
+  const { sessionToken } = req.body;
+  if (!sessionToken) return res.json({ success: true });
+
+  const db = readDb();
+  const sessIdx = db.userSessions.findIndex(s => s.id === sessionToken);
+  if (sessIdx !== -1) {
+    db.userSessions[sessIdx].status = 'Terminated';
+    
+    const user = db.users.find(u => u.id === db.userSessions[sessIdx].userId);
+    const audit: AuditLog = {
+      id: `aud_${Date.now()}`,
+      userId: user?.id,
+      userName: user?.name,
+      action: 'LOGOUT',
+      details: `User session terminated successfully.`,
+      ipAddress: req.ip || '127.0.0.1',
+      device: req.headers['user-agent'] || 'Web Browser',
+      timestamp: new Date().toISOString()
+    };
+    db.auditLogs.unshift(audit);
+  }
+  writeDb(db);
+  res.json({ success: true });
+});
+
+// Get User Profile & Config
+app.get('/api/auth/profile/:id', (req, res) => {
+  const db = readDb();
+  const user = db.users.find(u => u.id === req.params.id);
+  if (!user) return res.status(404).json({ error: 'Profile not found.' });
+
+  const { password: _, ...userWithoutPassword } = user;
+  res.json(userWithoutPassword);
+});
+
+// Update Profile Config
+app.put('/api/auth/profile/:id', (req, res) => {
+  const db = readDb();
+  const userIndex = db.users.findIndex(u => u.id === req.params.id);
+  if (userIndex === -1) return res.status(404).json({ error: 'Profile not found.' });
+
+  const user = db.users[userIndex];
+  const { name, phone, photo, department, designation, company, timezone, language, themePreference } = req.body;
+
+  if (name) user.name = name;
+  if (phone !== undefined) user.phone = phone;
+  if (photo !== undefined) user.photo = photo;
+  if (department !== undefined) user.department = department;
+  if (designation !== undefined) user.designation = designation;
+  if (company !== undefined) user.company = company;
+  if (timezone !== undefined) user.timezone = timezone;
+  if (language !== undefined) user.language = language;
+  if (themePreference !== undefined) user.themePreference = themePreference;
+
+  db.users[userIndex] = user;
+
+  const audit: AuditLog = {
+    id: `aud_${Date.now()}`,
+    userId: user.id,
+    userName: user.name,
+    action: 'SETTINGS_UPDATE',
+    details: `Updated personal corporate profile settings.`,
+    ipAddress: req.ip || '127.0.0.1',
+    device: req.headers['user-agent'] || 'Web Browser',
+    timestamp: new Date().toISOString()
+  };
+  db.auditLogs.unshift(audit);
+
+  writeDb(db);
+
+  const { password: _, ...userWithoutPassword } = user;
+  res.json(userWithoutPassword);
+});
+
+// Reset Password PIN dispatch simulation
+app.post('/api/auth/forgot-password', (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email is required.' });
+
+  const db = readDb();
+  const user = db.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+  if (!user) {
+    return res.status(400).json({ error: 'Corporate email address not found.' });
+  }
+
+  const resetPin = Math.floor(100000 + Math.random() * 900000).toString();
+  
+  const audit: AuditLog = {
+    id: `aud_${Date.now()}`,
+    userId: user.id,
+    userName: user.name,
+    action: 'FORGOT_PASSWORD',
+    details: `Password recovery PIN code simulated and dispatched for ${user.email}. PIN: ${resetPin}`,
+    timestamp: new Date().toISOString()
+  };
+  db.auditLogs.unshift(audit);
+
+  createNotification('Alert', 'Credential PIN Dispatched', `PIN code for password recovery for ${user.name} is: ${resetPin}`);
+  logSystem('info', `[CREDENTIAL RECOVERY] Dispatched PIN code for ${user.email}: ${resetPin}`);
+
+  writeDb(db);
+  res.json({ success: true, message: 'Temporary reset PIN dispatched.' });
+});
+
+// Reset Password with PIN
+app.post('/api/auth/reset-password', (req, res) => {
+  const { email, pin, newPassword } = req.body;
+  if (!email || !pin || !newPassword) {
+    return res.status(400).json({ error: 'Email, PIN, and new password are required.' });
+  }
+
+  const db = readDb();
+  const userIndex = db.users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+  if (userIndex === -1) {
+    return res.status(404).json({ error: 'Email address not found.' });
+  }
+
+  const expectedAudit = db.auditLogs.find(a => a.userId === db.users[userIndex].id && a.action === 'FORGOT_PASSWORD');
+  if (!expectedAudit || !expectedAudit.details.includes(pin)) {
+    return res.status(400).json({ error: 'Invalid security PIN code.' });
+  }
+
+  db.users[userIndex].password = newPassword;
+  db.users[userIndex].status = 'Active'; 
+  db.users[userIndex].failedLoginAttempts = 0;
+
+  const audit: AuditLog = {
+    id: `aud_${Date.now()}`,
+    userId: db.users[userIndex].id,
+    userName: db.users[userIndex].name,
+    action: 'RESET_PASSWORD',
+    details: `Password updated successfully via security PIN recovery.`,
+    timestamp: new Date().toISOString()
+  };
+  db.auditLogs.unshift(audit);
+
+  writeDb(db);
+  res.json({ success: true, message: 'Password reset successfully.' });
+});
+
+// Get Active Sessions for user
+app.get('/api/auth/sessions/:userId', (req, res) => {
+  const db = readDb();
+  const sessions = db.userSessions.filter(s => s.userId === req.params.userId && s.status === 'Active');
+  res.json(sessions);
+});
+
+// Terminate Active Session
+app.post('/api/auth/sessions/:id/terminate', (req, res) => {
+  const db = readDb();
+  const idx = db.userSessions.findIndex(s => s.id === req.params.id);
+  if (idx !== -1) {
+    db.userSessions[idx].status = 'Terminated';
+    writeDb(db);
+  }
+  res.json({ success: true });
+});
+
+// Audit Logs
+app.get('/api/auth/audit-logs', (req, res) => {
+  const db = readDb();
+  res.json(db.auditLogs || []);
+});
+
+// Admin API: List corporate users
+app.get('/api/auth/users', (req, res) => {
+  const db = readDb();
+  const users = db.users.map(({ password: _, ...u }) => u);
+  res.json(users);
+});
+
+// Admin API: Create corporate user
+app.post('/api/auth/users', (req, res) => {
+  const db = readDb();
+  const { name, email, password, role, department, designation } = req.body;
+  
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: 'Name, email, and password are required.' });
+  }
+
+  const exists = db.users.some(u => u.email.toLowerCase() === email.toLowerCase());
+  if (exists) return res.status(400).json({ error: 'Email already exists.' });
+
+  const newUser: User = {
+    id: `usr_${Date.now()}`,
+    name,
+    email,
+    role: role || 'user',
+    password,
+    status: 'Active',
+    department,
+    designation,
+    company: 'Geometric Suite',
+    createdAt: new Date().toISOString()
+  };
+
+  db.users.push(newUser);
+
+  const audit: AuditLog = {
+    id: `aud_${Date.now()}`,
+    action: 'USER_CREATED',
+    details: `Admin created user ${newUser.name} with role ${newUser.role}.`,
+    timestamp: new Date().toISOString()
+  };
+  db.auditLogs.unshift(audit);
+
+  writeDb(db);
+  const { password: _, ...userWithoutPassword } = newUser;
+  res.json(userWithoutPassword);
+});
+
+// Admin API: Update corporate user
+app.put('/api/auth/users/:id', (req, res) => {
+  const db = readDb();
+  const idx = db.users.findIndex(u => u.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'User not found.' });
+
+  const { name, role, status, department, designation, password } = req.body;
+
+  if (name) db.users[idx].name = name;
+  if (role) db.users[idx].role = role;
+  if (status) db.users[idx].status = status;
+  if (department) db.users[idx].department = department;
+  if (designation) db.users[idx].designation = designation;
+  if (password) db.users[idx].password = password;
+
+  const audit: AuditLog = {
+    id: `aud_${Date.now()}`,
+    action: 'USER_UPDATED',
+    details: `Admin modified profile details for user: "${db.users[idx].name}".`,
+    timestamp: new Date().toISOString()
+  };
+  db.auditLogs.unshift(audit);
+
+  writeDb(db);
+  const { password: _, ...userWithoutPassword } = db.users[idx];
+  res.json(userWithoutPassword);
+});
+
+// Roles & Configurable Permissions APIs
+app.get('/api/auth/roles', (req, res) => {
+  const db = readDb();
+  res.json(db.rolePermissions || []);
+});
+
+app.put('/api/auth/roles/:role', (req, res) => {
+  const db = readDb();
+  const { permissions } = req.body;
+  const idx = db.rolePermissions.findIndex(r => r.roleName === req.params.role);
+  if (idx !== -1) {
+    db.rolePermissions[idx].permissions = permissions;
+  } else {
+    db.rolePermissions.push({
+      id: `role_${Date.now()}`,
+      roleName: req.params.role as any,
+      permissions
+    });
+  }
+
+  const audit: AuditLog = {
+    id: `aud_${Date.now()}`,
+    action: 'ROLE_UPDATED',
+    details: `Updated permissions for security role "${req.params.role}".`,
+    timestamp: new Date().toISOString()
+  };
+  db.auditLogs.unshift(audit);
+
+  writeDb(db);
+  res.json({ success: true });
+});
+
+
+// ==========================================
+// ENTERPRISE MULTI-MAIL CENTER & AI INTELLIGENCE APIs
+// ==========================================
+
+// Mail Accounts
+app.get('/api/mail-accounts', (req, res) => {
+  const db = readDb();
+  res.json(db.mailAccounts || []);
+});
+
+app.post('/api/mail-accounts', (req, res) => {
+  const db = readDb();
+  const { name, email, provider } = req.body;
+  if (!name || !email || !provider) {
+    return res.status(400).json({ error: 'Name, email, and provider are required.' });
+  }
+
+  const newAccount: MailAccount = {
+    id: `mail_${Date.now()}`,
+    name,
+    email,
+    provider,
+    syncStatus: 'idle',
+    storageUsed: '0 GB of 15 GB',
+    isDefault: db.mailAccounts.length === 0,
+    isActive: true
+  };
+
+  db.mailAccounts.push(newAccount);
+  writeDb(db);
+  res.json(newAccount);
+});
+
+app.post('/api/mail-accounts/:id/toggle', (req, res) => {
+  const db = readDb();
+  const idx = db.mailAccounts.findIndex(m => m.id === req.params.id);
+  if (idx !== -1) {
+    db.mailAccounts[idx].isActive = !db.mailAccounts[idx].isActive;
+    writeDb(db);
+  }
+  res.json({ success: true, account: db.mailAccounts[idx] });
+});
+
+// Rich email composing (sent items and drafts)
+app.post('/api/emails/compose', (req, res) => {
+  const db = readDb();
+  const { senderEmail, senderName, subject, body, customerId, mailAccountId, isDraft, scheduledSendTime, attachments } = req.body;
+
+  const newEmail: Email = {
+    id: `em_${Date.now()}`,
+    senderName: senderName || 'Geometric Suite Work OS',
+    senderEmail: senderEmail || 'info@geometricsuite.yahoo',
+    subject,
+    body,
+    date: new Date().toISOString(),
+    unread: false,
+    starred: false,
+    archived: isDraft ? false : true, 
+    spam: false,
+    deleted: false,
+    priority: 'Medium',
+    category: 'Information',
+    customerId,
+    mailAccountId: mailAccountId || 'mail_yahoo_1',
+    isDraft: !!isDraft,
+    scheduledSendTime,
+    attachments: attachments || []
+  };
+
+  db.emails.unshift(newEmail);
+  writeDb(db);
+  res.json(newEmail);
+});
+
+// Suggest AI Reply with customized tone
+app.post('/api/emails/:id/suggest-reply', async (req, res) => {
+  const db = readDb();
+  const email = db.emails.find(e => e.id === req.params.id);
+  if (!email) return res.status(404).json({ error: 'Email not found.' });
+
+  const { tone } = req.body;
+
+  try {
+    const suggestion = await getAiReplySuggestion(email.subject, email.body, tone || 'Professional');
+    
+    const emIdx = db.emails.findIndex(e => e.id === email.id);
+    if (emIdx !== -1) {
+      if (!db.emails[emIdx].replyIntelligence) {
+        db.emails[emIdx].replyIntelligence = {
+          replyStatus: 'Reply Needed',
+          lastActivityTime: new Date().toISOString(),
+          followUpCount: 0,
+          priorityScore: email.priority === 'High' ? 85 : 45,
+          escalationFlag: false
+        };
+      }
+      db.emails[emIdx].replyIntelligence!.aiResponseSuggestion = suggestion;
+      writeDb(db);
+    }
+
+    res.json({ suggestion });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update AI Follow Up & Reply intelligence metrics
+app.post('/api/emails/:id/mark-followup', (req, res) => {
+  const db = readDb();
+  const emIdx = db.emails.findIndex(e => e.id === req.params.id);
+  if (emIdx === -1) return res.status(404).json({ error: 'Email not found.' });
+
+  const { replyStatus, followUpCount, priorityScore, escalationFlag, eventDescription } = req.body;
+  const email = db.emails[emIdx];
+
+  if (!email.replyIntelligence) {
+    email.replyIntelligence = {
+      replyStatus: replyStatus || 'Reply Needed',
+      lastActivityTime: new Date().toISOString(),
+      followUpCount: followUpCount || 0,
+      priorityScore: priorityScore || (email.priority === 'High' ? 85 : 50),
+      escalationFlag: !!escalationFlag,
+      timelineEvents: []
+    };
+  } else {
+    if (replyStatus) email.replyIntelligence.replyStatus = replyStatus;
+    if (followUpCount !== undefined) email.replyIntelligence.followUpCount = followUpCount;
+    if (priorityScore !== undefined) email.replyIntelligence.priorityScore = priorityScore;
+    if (escalationFlag !== undefined) email.replyIntelligence.escalationFlag = escalationFlag;
+  }
+
+  email.replyIntelligence.lastActivityTime = new Date().toISOString();
+
+  if (eventDescription) {
+    if (!email.replyIntelligence.timelineEvents) email.replyIntelligence.timelineEvents = [];
+    email.replyIntelligence.timelineEvents.push({
+      id: `evt_${Date.now()}`,
+      type: replyStatus || 'Update',
+      description: eventDescription,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  if (email.priority === 'High' && email.replyIntelligence.replyStatus === 'Reply Needed') {
+    email.replyIntelligence.priorityScore = 95;
+    email.replyIntelligence.escalationFlag = true;
+  }
+
+  db.emails[emIdx] = email;
+  writeDb(db);
+  res.json(email);
+});
 
 // Health Check
 app.get('/api/health', (req, res) => {
