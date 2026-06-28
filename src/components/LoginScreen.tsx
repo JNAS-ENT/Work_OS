@@ -43,36 +43,6 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Presets with their simulated passwords for authentic login
-  const presets = [
-    { name: 'Admin', email: 'shaikh.jnas@gmail.com', role: 'admin' as const, desc: 'Full System Control & Logs', password: '1@mJilanee' },
-    { name: 'Sarah (Operations Manager)', email: 'sarah.mgr@workos.com', role: 'manager' as const, desc: 'Commercial Pipeline & Approvals', password: 'managerpassword' },
-    { name: 'Alex (Technical Engineer)', email: 'alex.eng@workos.com', role: 'user' as const, desc: 'CAD Drawing Workspace & Tasks', password: 'userpassword' },
-    { name: 'Guest Inspector', email: 'guest.viewer@external.com', role: 'viewer' as const, desc: 'Read-only Audit Access', password: 'guestpassword' }
-  ];
-
-  const handlePresetLogin = async (preset: typeof presets[0]) => {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: preset.email, password: preset.password })
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Preset login failed.');
-      }
-      localStorage.setItem('work_os_session_token', data.sessionToken);
-      onLogin(data.user);
-    } catch (err: any) {
-      setErrorMsg(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -116,7 +86,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role })
+        body: JSON.stringify({ name, email, password, role: 'viewer' })
       });
       const data = await response.json();
       if (!response.ok) {
@@ -215,8 +185,8 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
       {/* Main Container */}
       <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-12 bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl relative z-10">
         
-        {/* Left Side: Branding and Role Info (5 cols) */}
-        <div className="md:col-span-5 bg-blue-900 p-8 flex flex-col justify-between text-white border-r border-blue-950">
+        {/* Left Side: Branding and System Features (5 cols) */}
+        <div className="md:col-span-5 bg-gradient-to-br from-blue-900 to-indigo-950 p-8 flex flex-col justify-between text-white border-r border-blue-950">
           <div className="space-y-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white text-blue-900 rounded-xl flex items-center justify-center font-black shadow-lg">
@@ -224,37 +194,43 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
               </div>
               <div>
                 <h2 className="text-sm font-bold tracking-tight uppercase">Work OS V2.0</h2>
-                <span className="text-[9px] text-blue-100 font-bold uppercase tracking-wider block">AI Operations Platform</span>
+                <span className="text-[9px] text-blue-200 font-bold uppercase tracking-wider block">AI Operations Platform</span>
               </div>
             </div>
 
             <div className="space-y-4 pt-4">
               <h1 className="text-xl md:text-2xl font-bold leading-tight tracking-tight">Enterprise Identity Core</h1>
               <p className="text-xs text-blue-100/80 font-normal leading-relaxed">
-                Connect and govern secure client mailboxes, CAD technical drawing workspaces, and WhatsApp dispatcher loops through role-isolated privileges.
+                Connect and govern secure client mailboxes, CAD technical drawing workspaces, and customer dispatcher loops through role-isolated privileges.
               </p>
             </div>
           </div>
 
-          {/* Quick Sandbox Tester */}
-          <div className="space-y-3 pt-6 border-t border-blue-950">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-blue-200">Fast Sandbox Identity Presets</p>
-            <div className="space-y-2">
-              {presets.map((preset, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handlePresetLogin(preset)}
-                  className="w-full text-left p-2.5 bg-blue-950/20 hover:bg-blue-950/40 border border-blue-200/10 hover:border-blue-200/30 transition rounded-xl text-xs flex justify-between items-center group cursor-pointer"
-                >
-                  <div>
-                    <p className="font-bold text-white group-hover:text-blue-200 transition text-[11px]">{preset.name}</p>
-                    <p className="text-[9px] text-slate-400 font-medium">{preset.desc}</p>
-                  </div>
-                  <span className="text-[10px] uppercase font-bold text-blue-400 bg-blue-900/30 px-2 py-0.5 border border-blue-500/20 rounded">
-                    {preset.role}
-                  </span>
-                </button>
-              ))}
+          {/* System Feature Lists */}
+          <div className="space-y-4 pt-6 border-t border-blue-900/60">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-blue-300">System Capability Map</p>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mt-1.5 shrink-0" />
+                <div>
+                  <h4 className="text-[11px] font-bold text-white">Unified Email Node</h4>
+                  <p className="text-[9px] text-blue-200/75 leading-normal">Synchronize secure Gmail, Outlook, Yahoo, and Generic IMAP folders seamlessly.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-1.5 h-1.5 bg-sky-400 rounded-full mt-1.5 shrink-0" />
+                <div>
+                  <h4 className="text-[11px] font-bold text-white">Dynamic Kanban Board</h4>
+                  <p className="text-[9px] text-blue-200/75 leading-normal">Manage critical milestones and priority tasks with zero-lag drag-and-drop mechanics.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full mt-1.5 shrink-0" />
+                <div>
+                  <h4 className="text-[11px] font-bold text-white">Gemini Intelligence Layer</h4>
+                  <p className="text-[9px] text-blue-200/75 leading-normal">Process real mailboxes to generate summaries, classify intents, and queue tasks.</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -447,22 +423,6 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                       className="w-full bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl py-2.5 pl-11 pr-4 text-xs text-white focus:outline-hidden focus:ring-1 focus:ring-blue-500"
                       required
                     />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Requested Security Role</label>
-                  <div className="grid grid-cols-5 gap-1.5 text-[10px]">
-                    {(['admin', 'manager', 'user', 'viewer', 'guest'] as const).map(r => (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setRole(r)}
-                        className={`py-2 text-center rounded-lg border font-bold uppercase transition ${role === r ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-400'}`}
-                      >
-                        {r}
-                      </button>
-                    ))}
                   </div>
                 </div>
 

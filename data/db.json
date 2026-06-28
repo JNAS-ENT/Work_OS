@@ -13,53 +13,129 @@
   "folders": [],
   "automations": [],
   "logs": [],
-  "rfqs": [],
-  "drawings": [],
-  "quotations": [],
-  "purchaseOrders": [],
-  "invoices": [],
-  "revisions": [],
-  "ecrs": [],
-  "userSessions": [],
   "auditLogs": [],
   "mailAccounts": [],
   "rolePermissions": [
     {
       "id": "perm_1",
       "roleName": "admin",
-      "permissions": ["view_dashboard", "manage_users", "manage_roles", "view_audit_logs", "sync_emails", "manage_tasks", "manage_projects", "manage_customers", "manage_engineering", "manage_automations", "view_logs", "ai_assistant"]
+      "permissions": [
+        "view_dashboard",
+        "manage_users",
+        "manage_roles",
+        "view_audit_logs",
+        "sync_emails",
+        "manage_tasks",
+        "manage_projects",
+        "manage_customers",
+        "manage_engineering",
+        "manage_automations",
+        "view_logs",
+        "ai_assistant"
+      ]
     },
     {
       "id": "perm_2",
       "roleName": "manager",
-      "permissions": ["view_dashboard", "sync_emails", "manage_tasks", "manage_projects", "manage_customers", "manage_engineering", "manage_automations", "ai_assistant"]
+      "permissions": [
+        "view_dashboard",
+        "sync_emails",
+        "manage_tasks",
+        "manage_projects",
+        "manage_customers",
+        "manage_engineering",
+        "manage_automations",
+        "ai_assistant"
+      ]
     },
     {
       "id": "perm_3",
       "roleName": "user",
-      "permissions": ["view_dashboard", "sync_emails", "manage_tasks", "manage_projects", "manage_customers", "manage_engineering", "ai_assistant"]
+      "permissions": [
+        "view_dashboard",
+        "sync_emails",
+        "manage_tasks",
+        "manage_projects",
+        "manage_customers",
+        "manage_engineering",
+        "ai_assistant"
+      ]
     },
     {
       "id": "perm_4",
       "roleName": "viewer",
-      "permissions": ["view_dashboard", "sync_emails"]
+      "permissions": [
+        "view_dashboard",
+        "sync_emails"
+      ]
     }
   ],
   "serviceProviders": [
-    { "id": "gmail", "name": "Gmail", "category": "email", "description": "Connect using secure Google OAuth 2.0 to access, sync, and reply to your corporate Gmail mailboxes." },
-    { "id": "yahoo", "name": "Yahoo Mail", "category": "email", "description": "Sync your business mailboxes using generic IMAP/SMTP or custom App Password credentials." },
-    { "id": "outlook", "name": "Outlook", "category": "email", "description": "Authenticate using Microsoft Graph API to access mail, calendar events, and contacts." },
-    { "id": "m365", "name": "Microsoft 365", "category": "email", "description": "Enterprise suite authentication for Azure AD / Microsoft 365 services." },
-    { "id": "gdrive", "name": "Google Drive", "category": "storage", "description": "Browse Google Drive directories, download drawings, and synchronize project vaults." },
-    { "id": "gemini", "name": "Gemini AI", "category": "ai", "description": "Secure enterprise connection using Gemini API Keys to run automated email triage and minutes compilation." },
-    { "id": "telegram", "name": "Telegram", "category": "chat", "description": "Automated notification relay dispatching critical alerts to active group threads using Bot Tokens." },
-    { "id": "whatsapp", "name": "WhatsApp", "category": "chat", "description": "Business messaging endpoint architecture for real-time customer support pipelines." },
-    { "id": "supabase", "name": "Supabase", "category": "database", "description": "Connect directly to your relational PostgreSQL storage, storage buckets, and realtime queues." },
-    { "id": "future", "name": "Future APIs", "category": "other", "description": "Reserved hooks for custom Zoho, Proton, and Active Exchange Server integrations." }
+    {
+      "id": "gmail",
+      "name": "Gmail",
+      "category": "email",
+      "description": "Connect using secure Google OAuth 2.0 to access, sync, and reply to your corporate Gmail mailboxes."
+    },
+    {
+      "id": "yahoo",
+      "name": "Yahoo Mail",
+      "category": "email",
+      "description": "Sync your business mailboxes using generic IMAP/SMTP or custom App Password credentials."
+    },
+    {
+      "id": "outlook",
+      "name": "Outlook",
+      "category": "email",
+      "description": "Authenticate using Microsoft Graph API to access mail, calendar events, and contacts."
+    },
+    {
+      "id": "m365",
+      "name": "Microsoft 365",
+      "category": "email",
+      "description": "Enterprise suite authentication for Azure AD / Microsoft 365 services."
+    },
+    {
+      "id": "gdrive",
+      "name": "Google Drive",
+      "category": "storage",
+      "description": "Browse Google Drive directories, download drawings, and synchronize project vaults."
+    },
+    {
+      "id": "gemini",
+      "name": "Gemini AI",
+      "category": "ai",
+      "description": "Secure enterprise connection using Gemini API Keys to run automated email triage and minutes compilation."
+    },
+    {
+      "id": "telegram",
+      "name": "Telegram",
+      "category": "chat",
+      "description": "Automated notification relay dispatching critical alerts to active group threads using Bot Tokens."
+    },
+    {
+      "id": "whatsapp",
+      "name": "WhatsApp",
+      "category": "chat",
+      "description": "Business messaging endpoint architecture for real-time customer support pipelines."
+    },
+    {
+      "id": "supabase",
+      "name": "Supabase",
+      "category": "database",
+      "description": "Connect directly to your relational PostgreSQL storage, storage buckets, and realtime queues."
+    },
+    {
+      "id": "future",
+      "name": "Future APIs",
+      "category": "other",
+      "description": "Reserved hooks for custom Zoho, Proton, and Active Exchange Server integrations."
+    }
   ],
   "serviceConnections": [],
   "oauthTokens": [],
   "providerSettings": [],
   "syncLogs": [],
-  "integrationErrors": []
+  "integrationErrors": [],
+  "lastSystemScan": ""
 }

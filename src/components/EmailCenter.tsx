@@ -39,11 +39,6 @@ export default function EmailCenter({
   const [showAccountManager, setShowAccountManager] = useState(false);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
 
-  // New mail account form fields
-  const [newAccName, setNewAccName] = useState('');
-  const [newAccEmail, setNewAccEmail] = useState('');
-  const [newAccProvider, setNewAccProvider] = useState<'yahoo' | 'outlook' | 'gmail' | 'imap' | 'smtp'>('yahoo');
-
   // Rich composer modal state
   const [showComposer, setShowComposer] = useState(false);
   const [compTo, setCompTo] = useState('');
@@ -88,24 +83,97 @@ export default function EmailCenter({
     fetchAccounts();
   }, [emails]);
 
+  // New mail account form fields
+  const [newAccName, setNewAccName] = useState('');
+  const [newAccEmail, setNewAccEmail] = useState('');
+  const [newAccProvider, setNewAccProvider] = useState<'gmail' | 'outlook' | 'yahoo' | 'imap'>('gmail');
+  const [imapUsername, setImapUsername] = useState('');
+  const [imapPassword, setImapPassword] = useState('');
+  const [imapHost, setImapHost] = useState('');
+  const [imapPort, setImapPort] = useState('993');
+  const [smtpHost, setSmtpHost] = useState('');
+  const [smtpPort, setSmtpPort] = useState('465');
+  const [sslTls, setSslTls] = useState(true);
+  const [testConnMessage, setTestConnMessage] = useState<string | null>(null);
+  const [testConnStatus, setTestConnStatus] = useState<'idle' | 'testing' | 'success' | 'failed'>('idle');
+
+  // Test Connection before saving
+  const handleTestConnection = async () => {
+    if (!newAccEmail) {
+      setTestConnStatus('failed');
+      setTestConnMessage('Please input an email address first.');
+      return;
+    }
+    setTestConnStatus('testing');
+    setTestConnMessage(null);
+    try {
+      const res = await fetch('/api/mail-accounts/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: newAccProvider,
+          email: newAccEmail,
+          imapHost: newAccProvider === 'yahoo' ? 'imap.mail.yahoo.com' : imapHost,
+          imapPort: newAccProvider === 'yahoo' ? 993 : Number(imapPort),
+          ssl: sslTls
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setTestConnStatus('success');
+        setTestConnMessage('IMAP Socket handshaked successfully!');
+      } else {
+        setTestConnStatus('failed');
+        setTestConnMessage(data.error || 'Validation failed.');
+      }
+    } catch (err: any) {
+      setTestConnStatus('failed');
+      setTestConnMessage(`Network or IMAP socket error: ${err.message}`);
+    }
+  };
+
   // Connect new corporate mailbox connection
   const handleConnectAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAccName || !newAccEmail) return;
+    if (!newAccEmail) return;
 
     try {
       const res = await fetch('/api/mail-accounts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newAccName, email: newAccEmail, provider: newAccProvider })
+        body: JSON.stringify({
+          name: newAccName || `${newAccProvider.toUpperCase()} (${newAccEmail})`,
+          email: newAccEmail,
+          provider: newAccProvider,
+          username: imapUsername || newAccEmail,
+          password: imapPassword,
+          imapHost: newAccProvider === 'yahoo' ? 'imap.mail.yahoo.com' : imapHost,
+          imapPort: newAccProvider === 'yahoo' ? 993 : Number(imapPort),
+          smtpHost: newAccProvider === 'yahoo' ? 'smtp.mail.yahoo.com' : smtpHost,
+          smtpPort: newAccProvider === 'yahoo' ? 465 : Number(smtpPort),
+          ssl: sslTls
+        })
       });
       if (res.ok) {
         setNewAccName('');
         setNewAccEmail('');
+        setImapUsername('');
+        setImapPassword('');
+        setImapHost('');
+        setImapPort('993');
+        setSmtpHost('');
+        setSmtpPort('465');
+        setSslTls(true);
+        setTestConnMessage(null);
+        setTestConnStatus('idle');
         fetchAccounts();
+      } else {
+        const data = await res.json();
+        alert(`Failed to save account connection: ${data.error}`);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert(`Error connecting account: ${err.message}`);
     }
   };
 
@@ -350,38 +418,166 @@ export default function EmailCenter({
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 space-y-3">
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-4 shadow-sm">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Add Mail Connection</span>
-                <form onSubmit={handleConnectAccount} className="space-y-2">
-                  <input 
-                    type="text"
-                    placeholder="Account Name (e.g. Sales Yahoo)"
-                    value={newAccName}
-                    onChange={e => setNewAccName(e.target.value)}
-                    className="w-full p-1.5 border border-slate-200 dark:border-slate-800 rounded text-xs bg-transparent text-slate-800 dark:text-slate-200"
-                    required
-                  />
-                  <input 
-                    type="email"
-                    placeholder="username@yahoo.com"
-                    value={newAccEmail}
-                    onChange={e => setNewAccEmail(e.target.value)}
-                    className="w-full p-1.5 border border-slate-200 dark:border-slate-800 rounded text-xs bg-transparent text-slate-800 dark:text-slate-200"
-                    required
-                  />
-                  <select 
-                    value={newAccProvider}
-                    onChange={e => setNewAccProvider(e.target.value as any)}
-                    className="w-full p-1.5 border border-slate-200 dark:border-slate-800 rounded text-xs bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"
-                  >
-                    <option value="yahoo">Yahoo Mail</option>
-                    <option value="gmail">Google Workspace</option>
-                    <option value="outlook">Outlook Exchange</option>
-                    <option value="imap">Secure IMAP Client</option>
-                    <option value="smtp">Direct SMTP Server</option>
-                  </select>
-                  <button type="submit" className="w-full py-1.5 bg-blue-600 text-white rounded font-bold text-xs hover:bg-blue-700 transition">
-                    Authorize & Sync
+                <form onSubmit={handleConnectAccount} className="space-y-3">
+                  
+                  {/* Choose Provider */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Choose Provider</label>
+                    <div className="grid grid-cols-4 gap-1">
+                      {(['gmail', 'outlook', 'yahoo', 'imap'] as const).map(p => (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => {
+                            setNewAccProvider(p);
+                            setTestConnMessage(null);
+                            setTestConnStatus('idle');
+                          }}
+                          className={`py-1.5 text-center text-[10px] font-bold uppercase rounded-lg border transition cursor-pointer ${newAccProvider === p ? 'bg-blue-600 border-blue-600 text-white shadow-xs' : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-500 hover:border-slate-300 dark:hover:border-slate-700'}`}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Basic Metadata */}
+                  <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-slate-800/50">
+                    <input 
+                      type="text"
+                      placeholder="Connection Label (e.g. Primary Gmail)"
+                      value={newAccName}
+                      onChange={e => setNewAccName(e.target.value)}
+                      className="w-full p-1.5 border border-slate-200 dark:border-slate-800 rounded-lg text-xs bg-transparent text-slate-800 dark:text-slate-200 focus:outline-hidden focus:border-blue-500"
+                    />
+                    <input 
+                      type="email"
+                      placeholder="corporate@domain.com"
+                      value={newAccEmail}
+                      onChange={e => setNewAccEmail(e.target.value)}
+                      className="w-full p-1.5 border border-slate-200 dark:border-slate-800 rounded-lg text-xs bg-transparent text-slate-800 dark:text-slate-200 focus:outline-hidden focus:border-blue-500"
+                      required
+                    />
+                  </div>
+
+                  {/* Provider Specific Section */}
+                  {newAccProvider === 'gmail' && (
+                    <div className="p-2.5 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 rounded-lg text-[10px] text-blue-600 dark:text-blue-400 leading-normal">
+                      🛡️ Google Secure OAuth 2.0. No password required. We only query authorized scopes.
+                    </div>
+                  )}
+
+                  {newAccProvider === 'outlook' && (
+                    <div className="p-2.5 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 rounded-lg text-[10px] text-indigo-600 dark:text-indigo-400 leading-normal">
+                      🛡️ Microsoft Secure OAuth 2.0. Protects credentials automatically using Azure tokens.
+                    </div>
+                  )}
+
+                  {newAccProvider === 'yahoo' && (
+                    <div className="space-y-2">
+                      <div className="p-2.5 bg-yellow-50/50 dark:bg-yellow-950/20 border border-yellow-100 dark:border-yellow-900/30 rounded-lg text-[10px] text-yellow-600 dark:text-yellow-400 leading-normal">
+                        ℹ️ Yahoo Mail demands a 16-character Yahoo App Password. Do not use your primary login password.
+                      </div>
+                      <input 
+                        type="password"
+                        placeholder="Yahoo App Password"
+                        value={imapPassword}
+                        onChange={e => setImapPassword(e.target.value)}
+                        className="w-full p-1.5 border border-slate-200 dark:border-slate-800 rounded-lg text-xs bg-transparent text-slate-800 dark:text-slate-200 focus:outline-hidden focus:border-blue-500"
+                        required
+                      />
+                    </div>
+                  )}
+
+                  {newAccProvider === 'imap' && (
+                    <div className="space-y-2">
+                      <input 
+                        type="text"
+                        placeholder="IMAP Username (optional)"
+                        value={imapUsername}
+                        onChange={e => setImapUsername(e.target.value)}
+                        className="w-full p-1.5 border border-slate-200 dark:border-slate-800 rounded-lg text-xs bg-transparent text-slate-800 dark:text-slate-200 focus:outline-hidden"
+                      />
+                      <input 
+                        type="password"
+                        placeholder="IMAP Password or App Token"
+                        value={imapPassword}
+                        onChange={e => setImapPassword(e.target.value)}
+                        className="w-full p-1.5 border border-slate-200 dark:border-slate-800 rounded-lg text-xs bg-transparent text-slate-800 dark:text-slate-200 focus:outline-hidden"
+                        required
+                      />
+                      <div className="grid grid-cols-3 gap-1.5 text-xs">
+                        <input 
+                          type="text"
+                          placeholder="IMAP Host"
+                          value={imapHost}
+                          onChange={e => setImapHost(e.target.value)}
+                          className="col-span-2 p-1.5 border border-slate-200 dark:border-slate-800 rounded-lg text-xs bg-transparent text-slate-800 dark:text-slate-200 focus:outline-hidden"
+                          required={newAccProvider === 'imap'}
+                        />
+                        <input 
+                          type="text"
+                          placeholder="Port"
+                          value={imapPort}
+                          onChange={e => setImapPort(e.target.value)}
+                          className="p-1.5 border border-slate-200 dark:border-slate-800 rounded-lg text-xs bg-transparent text-slate-800 dark:text-slate-200 focus:outline-hidden"
+                          required={newAccProvider === 'imap'}
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 gap-1.5 text-xs">
+                        <input 
+                          type="text"
+                          placeholder="SMTP Host"
+                          value={smtpHost}
+                          onChange={e => setSmtpHost(e.target.value)}
+                          className="col-span-2 p-1.5 border border-slate-200 dark:border-slate-800 rounded-lg text-xs bg-transparent text-slate-800 dark:text-slate-200 focus:outline-hidden"
+                          required={newAccProvider === 'imap'}
+                        />
+                        <input 
+                          type="text"
+                          placeholder="Port"
+                          value={smtpPort}
+                          onChange={e => setSmtpPort(e.target.value)}
+                          className="p-1.5 border border-slate-200 dark:border-slate-800 rounded-lg text-xs bg-transparent text-slate-800 dark:text-slate-200 focus:outline-hidden"
+                          required={newAccProvider === 'imap'}
+                        />
+                      </div>
+                      <label className="flex items-center gap-2 text-[10px] text-slate-400 font-bold select-none cursor-pointer">
+                        <input 
+                          type="checkbox"
+                          checked={sslTls}
+                          onChange={e => setSslTls(e.target.checked)}
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        Use SSL/TLS
+                      </label>
+                    </div>
+                  )}
+
+                  {/* Testing segment */}
+                  {(newAccProvider === 'yahoo' || newAccProvider === 'imap') && (
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={handleTestConnection}
+                        disabled={testConnStatus === 'testing'}
+                        className="w-full py-1 text-[10px] font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 rounded-lg transition"
+                      >
+                        {testConnStatus === 'testing' ? 'Testing Handshake...' : '⚡ Test Connection Socket'}
+                      </button>
+                      {testConnMessage && (
+                        <p className={`text-[9px] mt-1.5 leading-normal font-medium ${testConnStatus === 'success' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                          {testConnMessage}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Submit Button */}
+                  <button type="submit" className="w-full py-2 bg-blue-600 text-white rounded-lg font-bold text-xs hover:bg-blue-700 transition cursor-pointer">
+                    Authorize & Sync Connection
                   </button>
                 </form>
               </div>
