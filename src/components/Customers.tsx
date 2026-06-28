@@ -60,6 +60,22 @@ export default function Customers({
     { sender: 'bot', text: '🤖 WORK OS Interactive Sync bot initialized. Type or select a command (e.g. today, workload, /tasks) to simulate mobile automation.', time: '02:40' }
   ]);
 
+  const [connections, setConnections] = useState<any[]>([]);
+  const [connectionsLoading, setConnectionsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/integrations/connections')
+      .then(res => res.json())
+      .then(data => {
+        setConnections(data || []);
+        setConnectionsLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setConnectionsLoading(false);
+      });
+  }, [activeMainTab]);
+
   // Load customer detailed relations from server
   useEffect(() => {
     if (selectedCustomerId) {
@@ -826,63 +842,96 @@ export default function Customers({
             {/* Chat viewport box */}
             <div className="flex-1 bg-slate-950 border border-slate-800 rounded-3xl p-5 flex flex-col overflow-hidden max-h-[400px]">
               
-              {/* Messages log */}
-              <div className="flex-1 overflow-y-auto space-y-3.5 pr-2">
-                {chatHistory.map((chat, idx) => {
-                  const isBot = chat.sender === 'bot';
-                  return (
-                    <div key={idx} className={`flex flex-col ${isBot ? 'items-start' : 'items-end'}`}>
-                      <div className={`p-3.5 rounded-2xl max-w-[80%] text-xs font-medium leading-relaxed whitespace-pre-wrap ${isBot ? 'bg-slate-900 text-slate-100 border border-slate-800' : 'bg-blue-600 text-white'}`}>
-                        {chat.text}
-                      </div>
-                      <span className="text-[9px] text-slate-500 font-bold mt-1 font-mono">{chat.time}</span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Bot Commands Presets bar */}
-              <div className="pt-3 border-t border-slate-900 flex flex-wrap gap-1.5">
-                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">Quick Command:</span>
-                {[
-                  activeChatPlatform === 'whatsapp' ? 'today' : '/today',
-                  activeChatPlatform === 'whatsapp' ? 'workload' : '/workload',
-                  activeChatPlatform === 'whatsapp' ? 'tasks' : '/tasks',
-                  activeChatPlatform === 'whatsapp' ? 'overdue' : '/overdue',
-                  activeChatPlatform === 'whatsapp' ? 'meeting' : '/meetings',
-                  'invoice'
-                ].map((cmd, i) => (
-                  <button
-                    key={i}
-                    onClick={() => executeChatCommand(cmd)}
-                    className="px-2.5 py-1 bg-slate-900 hover:bg-slate-850 text-slate-300 rounded-lg border border-slate-800 text-[10px] font-bold transition cursor-pointer"
+              {!connections.some(c => c.providerId === activeChatPlatform && c.status === 'Connected') ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-4">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${
+                    activeChatPlatform === 'whatsapp' 
+                      ? 'bg-emerald-950/30 border-emerald-900 text-emerald-500' 
+                      : 'bg-blue-950/30 border-blue-900 text-blue-500'
+                  }`}>
+                    <MessageSquare className="h-6 w-6" />
+                  </div>
+                  <div className="space-y-1 max-w-xs">
+                    <h3 className="text-xs font-bold text-slate-200">
+                      {activeChatPlatform === 'whatsapp' ? 'WhatsApp Business is not connected.' : 'No Telegram Bot configured.'}
+                    </h3>
+                    <p className="text-[10px] text-slate-500 leading-normal">
+                      {activeChatPlatform === 'whatsapp' 
+                        ? 'Connect your WhatsApp Business account via Settings to start orchestrating real-time customer workflows and briefings.'
+                        : 'Configure your Telegram Bot token via Settings to start dispatching notifications and managing pipeline triggers.'
+                      }
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => onNavigate('settings')}
+                    className={`px-4 py-1.5 rounded-lg text-[11px] font-bold text-white transition cursor-pointer ${
+                      activeChatPlatform === 'whatsapp' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
                   >
-                    {cmd}
+                    {activeChatPlatform === 'whatsapp' ? 'Connect WhatsApp' : 'Connect Telegram'}
                   </button>
-                ))}
-              </div>
+                </div>
+              ) : (
+                <>
+                  {/* Messages log */}
+                  <div className="flex-1 overflow-y-auto space-y-3.5 pr-2">
+                    {chatHistory.map((chat, idx) => {
+                      const isBot = chat.sender === 'bot';
+                      return (
+                        <div key={idx} className={`flex flex-col ${isBot ? 'items-start' : 'items-end'}`}>
+                          <div className={`p-3.5 rounded-2xl max-w-[80%] text-xs font-medium leading-relaxed whitespace-pre-wrap ${isBot ? 'bg-slate-900 text-slate-100 border border-slate-800' : 'bg-blue-600 text-white'}`}>
+                            {chat.text}
+                          </div>
+                          <span className="text-[9px] text-slate-500 font-bold mt-1 font-mono">{chat.time}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
 
-              {/* Input field */}
-              <div className="pt-3 flex gap-2">
-                <input
-                  type="text"
-                  placeholder={activeChatPlatform === 'whatsapp' ? "Type command (e.g. workload)..." : "Type command (e.g. /tasks)..."}
-                  value={chatCommandInput}
-                  onChange={e => setChatCommandInput(e.target.value)}
-                  className="flex-1 bg-slate-900 border border-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 px-4 py-2 rounded-xl text-xs text-white"
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      executeChatCommand(chatCommandInput);
-                    }
-                  }}
-                />
-                <button
-                  onClick={() => executeChatCommand(chatCommandInput)}
-                  className={`p-2 rounded-xl text-white ${activeChatPlatform === 'whatsapp' ? 'bg-emerald-600' : 'bg-blue-600'}`}
-                >
-                  <Send className="h-4 w-4" />
-                </button>
-              </div>
+                  {/* Bot Commands Presets bar */}
+                  <div className="pt-3 border-t border-slate-900 flex flex-wrap gap-1.5">
+                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">Quick Command:</span>
+                    {[
+                      activeChatPlatform === 'whatsapp' ? 'today' : '/today',
+                      activeChatPlatform === 'whatsapp' ? 'workload' : '/workload',
+                      activeChatPlatform === 'whatsapp' ? 'tasks' : '/tasks',
+                      activeChatPlatform === 'whatsapp' ? 'overdue' : '/overdue',
+                      activeChatPlatform === 'whatsapp' ? 'meeting' : '/meetings',
+                      'invoice'
+                    ].map((cmd, i) => (
+                      <button
+                        key={i}
+                        onClick={() => executeChatCommand(cmd)}
+                        className="px-2.5 py-1 bg-slate-900 hover:bg-slate-850 text-slate-300 rounded-lg border border-slate-800 text-[10px] font-bold transition cursor-pointer"
+                      >
+                        {cmd}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Input field */}
+                  <div className="pt-3 flex gap-2">
+                    <input
+                      type="text"
+                      placeholder={activeChatPlatform === 'whatsapp' ? "Type command (e.g. workload)..." : "Type command (e.g. /tasks)..."}
+                      value={chatCommandInput}
+                      onChange={e => setChatCommandInput(e.target.value)}
+                      className="flex-1 bg-slate-900 border border-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 px-4 py-2 rounded-xl text-xs text-white"
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          executeChatCommand(chatCommandInput);
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => executeChatCommand(chatCommandInput)}
+                      className={`p-2 rounded-xl text-white ${activeChatPlatform === 'whatsapp' ? 'bg-emerald-600' : 'bg-blue-600'}`}
+                    >
+                      <Send className="h-4 w-4" />
+                    </button>
+                  </div>
+                </>
+              )}
 
             </div>
           </div>

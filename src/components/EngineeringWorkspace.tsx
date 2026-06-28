@@ -799,24 +799,24 @@ export default function EngineeringWorkspace({ customers, projects, onNavigate }
 
           {/* AI ENGINEERING ASSISTANT SIDEBAR */}
           <div className="lg:col-span-4 space-y-4">
-            <div className="bg-gradient-to-br from-slate-950 to-indigo-950 text-white p-5 rounded-2xl shadow-md space-y-4 border border-indigo-500/20">
-              <h3 className="text-xs font-extrabold text-indigo-300 uppercase tracking-widest flex items-center gap-1.5">
-                <Sparkles className="h-4 w-4 text-indigo-400" /> AI Engineering Cost Estimator
+            <div className="bg-blue-900 text-white p-5 rounded-2xl border border-blue-950 space-y-4">
+              <h3 className="text-xs font-extrabold text-blue-300 uppercase tracking-widest flex items-center gap-1.5">
+                <Sparkles className="h-4 w-4 text-blue-400" /> AI Engineering Cost Estimator
               </h3>
 
               {analyzingRfq ? (
-                <div className="py-12 text-center text-xs text-indigo-200/80 animate-pulse space-y-2">
-                  <RefreshCw className="h-6 w-6 text-indigo-400 mx-auto animate-spin" />
+                <div className="py-12 text-center text-xs text-blue-200/80 animate-pulse space-y-2">
+                  <RefreshCw className="h-6 w-6 text-blue-400 mx-auto animate-spin" />
                   <p>Analyzing structural model & CAD specifications...</p>
                 </div>
               ) : selectedRfqAi && aiAnalysisResult ? (
                 <div className="space-y-4 text-xs leading-relaxed">
                   <div className="space-y-1">
-                    <span className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider block">RFQ Context Selected</span>
-                    <span className="font-bold text-slate-200">{rfqs.find(r => r.id === selectedRfqAi)?.title}</span>
+                    <span className="text-[10px] text-blue-300 font-bold uppercase tracking-wider block">RFQ Context Selected</span>
+                    <span className="font-bold text-blue-200">{rfqs.find(r => r.id === selectedRfqAi)?.title}</span>
                   </div>
 
-                  <div className="bg-slate-900/60 p-3.5 rounded-xl border border-indigo-500/10 space-y-2.5 font-mono">
+                  <div className="bg-blue-950/40 p-3.5 rounded-xl border border-blue-200/10 space-y-2.5 font-mono">
                     <div className="flex justify-between">
                       <span className="text-slate-400">Part Weight:</span>
                       <span className="text-slate-200">{aiAnalysisResult.partWeightGrams} grams</span>

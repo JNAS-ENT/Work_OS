@@ -35,7 +35,28 @@ import { Email, Task, Project, Customer, FileItem, Rfq, Drawing, Quotation, Purc
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [activeCommSubTab, setActiveCommSubTab] = useState<string>('email');
+  const [activeWorkSubTab, setActiveWorkSubTab] = useState<string>('tasks');
+  const [activeDocSubTab, setActiveDocSubTab] = useState<string>('files');
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [userRoleOverride, setUserRoleOverride] = useState<string | null>(null);
+  const userDropdownRef = React.useRef<HTMLDivElement>(null);
   const [tabParam, setTabParam] = useState<any>(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(e.target as Node)) {
+        setIsUserDropdownOpen(false);
+      }
+    };
+    if (isUserDropdownOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isUserDropdownOpen]);
 
   // Theme support
   const { theme, resolvedTheme, setTheme } = useTheme();
@@ -318,26 +339,49 @@ export default function App() {
   };
 
   const handleDeepNavigate = (tab: string, param?: any) => {
-    setActiveTab(tab);
     setTabParam(param);
 
-    // Map parameters back to selected values
-    if (tab === 'email' && param?.emailId) {
-      setSelectedEmailId(param.emailId);
-    }
-    if (tab === 'customers' && param?.customerId) {
-      setSelectedCustomerId(param.customerId);
-    }
-    if (tab === 'projects' && param?.projectId) {
-      setSelectedProjectId(param.projectId);
+    // Grouping mapping
+    if (tab === 'email' || tab === 'whatsapp' || tab === 'calendar' || tab === 'communications') {
+      setActiveTab('communications');
+      if (tab !== 'communications') {
+        setActiveCommSubTab(tab);
+      }
+      if (tab === 'email' && param?.emailId) {
+        setSelectedEmailId(param.emailId);
+      }
+    } else if (tab === 'tasks' || tab === 'projects' || tab === 'engineering' || tab === 'automations' || tab === 'work') {
+      setActiveTab('work');
+      if (tab !== 'work') {
+        setActiveWorkSubTab(tab);
+      }
+      if (tab === 'projects' && param?.projectId) {
+        setSelectedProjectId(param.projectId);
+      }
+    } else if (tab === 'files' || tab === 'notes' || tab === 'logs' || tab === 'documents') {
+      setActiveTab('documents');
+      if (tab !== 'documents') {
+        setActiveDocSubTab(tab);
+      }
+    } else if (tab === 'customers' || tab === 'crm') {
+      setActiveTab('crm');
+      if (tab === 'customers' && param?.customerId) {
+        setSelectedCustomerId(param.customerId);
+      }
+    } else if (tab === 'assistant' || tab === 'ai') {
+      setActiveTab('ai');
+    } else if (tab === 'settings') {
+      setActiveTab('settings');
+    } else {
+      setActiveTab(tab);
     }
   };
 
   const handleDashboardAction = (action: string) => {
     if (action === 'new-task') {
-      setActiveTab('tasks');
+      handleDeepNavigate('tasks');
     } else if (action === 'new-meeting') {
-      setActiveTab('calendar');
+      handleDeepNavigate('calendar');
     }
   };
 
@@ -346,19 +390,12 @@ export default function App() {
   };
 
   const sidebarItems = [
-    { id: 'dashboard', label: 'Action Center', icon: LayoutDashboard },
-    { id: 'whatsapp', label: 'WhatsApp AI Center', icon: Phone },
-    { id: 'email', label: 'Email Center', icon: Mail, badge: emails.filter(e => e.unread && !e.deleted).length },
-    { id: 'tasks', label: 'Task Manager', icon: CheckSquare, badge: tasks.filter(t => t.status !== 'Completed').length },
-    { id: 'projects', label: 'Projects', icon: Briefcase },
-    { id: 'engineering', label: 'Engineering Workspace', icon: Cpu },
-    { id: 'customers', label: 'Customers', icon: Users },
-    { id: 'calendar', label: 'Calendar', icon: Calendar },
-    { id: 'notes', label: 'Notes Hub', icon: FileText },
-    { id: 'files', label: 'Files Vault', icon: Folder },
-    { id: 'automations', label: 'Automations', icon: Layers },
-    { id: 'logs', label: 'System Logs', icon: Terminal },
-    { id: 'assistant', label: 'AI Assistant', icon: Sparkles },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'communications', label: 'Communications', icon: Mail, badge: emails.filter(e => e.unread && !e.deleted).length },
+    { id: 'crm', label: 'CRM', icon: Users },
+    { id: 'work', label: 'Work', icon: CheckSquare, badge: tasks.filter(t => t.status !== 'Completed').length },
+    { id: 'documents', label: 'Documents', icon: Folder },
+    { id: 'ai', label: 'AI', icon: Sparkles },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -367,22 +404,24 @@ export default function App() {
     return <LoginScreen onLogin={handleLogin} />;
   }
 
+  const activeRole = userRoleOverride || currentUser.role || 'user';
+
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans overflow-hidden transition-colors duration-200">
+    <div className="flex h-screen bg-slate-900 text-slate-800 font-sans overflow-hidden transition-colors duration-200">
       
       {/* Sidebar Navigation */}
-      <aside className={`bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 z-20 transition-all duration-300 ${isSidebarCollapsed ? 'w-16' : 'w-60'}`}>
+      <aside className={`bg-blue-600 border-r border-blue-700/50 flex flex-col justify-between shrink-0 z-20 transition-all duration-300 ${isSidebarCollapsed ? 'w-16' : 'w-60'}`}>
         <div className="flex flex-col flex-1 overflow-y-auto">
           {/* Logo Branding */}
-          <div className="p-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80">
+          <div className="p-4 flex items-center justify-between border-b border-blue-700/40">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shrink-0 shadow-sm">
+              <div className="w-8 h-8 bg-blue-700 rounded-lg flex items-center justify-center text-white shrink-0 shadow-sm border border-blue-500/30">
                 <LayoutGrid className="w-4 h-4 text-white" />
               </div>
               {!isSidebarCollapsed && (
                 <div className="space-y-0.5 animate-fade-in truncate">
-                  <h1 className="text-xs font-bold tracking-tight text-slate-800 dark:text-slate-200 uppercase">Work OS V2</h1>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Geometric Suite</span>
+                  <h1 className="text-xs font-bold tracking-tight text-white uppercase">Work OS V2</h1>
+                  <span className="text-[9px] text-blue-200 font-bold uppercase tracking-wider block">Geometric Suite</span>
                 </div>
               )}
             </div>
@@ -390,7 +429,7 @@ export default function App() {
             <button 
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
               title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg transition"
+              className="p-1.5 hover:bg-blue-700 text-blue-200 hover:text-white rounded-lg transition"
             >
               <ChevronLeft className={`h-4 w-4 transition-transform duration-300 ${isSidebarCollapsed ? 'rotate-180' : ''}`} />
             </button>
@@ -402,60 +441,132 @@ export default function App() {
               const Icon = item.icon;
               const active = activeTab === item.id;
               return (
-                <button
-                  key={item.id}
-                  onClick={() => handleDeepNavigate(item.id)}
-                  title={isSidebarCollapsed ? item.label : undefined}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer ${
-                    active 
-                      ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-bold shadow-2xs border-l-4 border-blue-600' 
-                      : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/30 hover:text-slate-800 dark:hover:text-slate-200'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon className={`h-4.5 w-4.5 ${active ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
-                    {!isSidebarCollapsed && <span className="animate-fade-in">{item.label}</span>}
-                  </div>
-                  {!isSidebarCollapsed && item.badge && item.badge > 0 ? (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold shrink-0 ${active ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300' : 'bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400'}`}>
-                      {item.badge}
-                    </span>
-                  ) : null}
-                </button>
+                <div key={item.id} className="group relative w-full">
+                  <button
+                    onClick={() => handleDeepNavigate(item.id)}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer ${
+                      active 
+                        ? 'bg-blue-700 text-white font-bold border-l-4 border-blue-100 shadow-sm' 
+                        : 'text-blue-100 hover:bg-blue-700/60 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon className={`h-4.5 w-4.5 ${active ? 'text-white' : 'text-blue-200'}`} />
+                      {!isSidebarCollapsed && <span className="animate-fade-in truncate">{item.label}</span>}
+                    </div>
+                    {!isSidebarCollapsed && item.badge && item.badge > 0 ? (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold shrink-0 ${active ? 'bg-blue-800 text-white' : 'bg-red-500/80 text-white'}`}>
+                        {item.badge}
+                      </span>
+                    ) : null}
+                  </button>
+
+                  {/* Hover Tooltip - only visible when collapsed */}
+                  {isSidebarCollapsed && (
+                    <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 bg-slate-900 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 shadow-md whitespace-nowrap z-50 border border-slate-800">
+                      {item.label}
+                    </div>
+                  )}
+                </div>
               );
             })}
           </nav>
         </div>
 
         {/* User Account footer */}
-        <div className="p-3 mt-auto border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20 space-y-2">
-          <div className="flex items-center justify-between p-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs gap-2 min-w-0">
-            <span className="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white uppercase">
+        <div className="p-4 mt-auto border-t border-blue-700/40 flex items-center justify-between relative" ref={userDropdownRef}>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+              title="User Settings"
+              className="w-9 h-9 rounded-full bg-blue-700 hover:bg-blue-800 active:scale-95 transition flex items-center justify-center text-xs font-bold text-white uppercase shadow-sm cursor-pointer shrink-0 relative border border-blue-500/20"
+            >
               {currentUser.name.substring(0, 2)}
-            </span>
+            </button>
             {!isSidebarCollapsed && (
-              <div className="overflow-hidden min-w-0 flex-1 animate-fade-in">
-                <p className="text-xs font-bold truncate text-slate-800 dark:text-slate-200">{currentUser.name}</p>
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate capitalize font-semibold">{currentUser.role} Account</p>
-              </div>
-            )}
-            {!isSidebarCollapsed && (
-              <button 
-                onClick={handleLogout}
-                title="Log Out Session"
-                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg text-slate-400 transition shrink-0 cursor-pointer"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
+              <span className="text-xs font-semibold text-blue-100 truncate max-w-[100px] animate-fade-in">
+                {currentUser.name}
+              </span>
             )}
           </div>
+          
           {!isSidebarCollapsed && (
-            <div className="flex items-center justify-between text-[9px] text-slate-400 font-bold px-1 uppercase animate-fade-in">
-              <span>SLA: Optimal</span>
-              <span className="flex items-center gap-1.5 text-emerald-600">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                Active
-              </span>
+            <button
+              onClick={handleLogout}
+              title="Log Out"
+              className="p-1.5 hover:bg-blue-700 text-blue-200 hover:text-white rounded-lg transition cursor-pointer"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          )}
+
+          {/* Dropdown Menu */}
+          {isUserDropdownOpen && (
+            <div className="absolute bottom-full mb-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg p-1.5 min-w-[180px] z-50 animate-fade-in left-4">
+              <div className="px-2.5 py-1.5 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800/80 mb-1">
+                User Options
+              </div>
+              <button
+                onClick={() => {
+                  setIsUserDropdownOpen(false);
+                }}
+                className="w-full text-left px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-lg transition cursor-pointer"
+              >
+                Profile
+              </button>
+              <button
+                onClick={() => {
+                  setIsUserDropdownOpen(false);
+                }}
+                className="w-full text-left px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-lg transition cursor-pointer"
+              >
+                My Account
+              </button>
+              <button
+                onClick={() => {
+                  handleDeepNavigate('settings');
+                  setIsUserDropdownOpen(false);
+                }}
+                className="w-full text-left px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-lg transition cursor-pointer"
+              >
+                Settings
+              </button>
+              <button
+                onClick={() => {
+                  setIsUserDropdownOpen(false);
+                  handleLogout();
+                }}
+                className="w-full text-left px-2.5 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg transition cursor-pointer"
+              >
+                Logout
+              </button>
+
+              {currentUser.role?.toLowerCase() === 'admin' && (
+                <>
+                  <div className="border-t border-slate-100 dark:border-slate-800 my-1"></div>
+                  <div className="px-2.5 py-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
+                    Admin Tools
+                  </div>
+                  <button
+                    onClick={() => {
+                      setUserRoleOverride('user');
+                      setIsUserDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-2.5 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer ${activeRole === 'user' ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'}`}
+                  >
+                    Switch to User View
+                  </button>
+                  <button
+                    onClick={() => {
+                      setUserRoleOverride('admin');
+                      setIsUserDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-2.5 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer ${activeRole === 'admin' ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'}`}
+                  >
+                    Switch to Admin View
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -475,6 +586,30 @@ export default function App() {
               <span className="text-slate-700 dark:text-slate-300 capitalize font-bold">
                 {sidebarItems.find(i => i.id === activeTab)?.label}
               </span>
+              {activeTab === 'communications' && (
+                <>
+                  <ChevronRight className="h-3 w-3" />
+                  <span className="text-blue-600 dark:text-blue-400 font-bold capitalize">
+                    {activeCommSubTab === 'whatsapp' ? 'WhatsApp AI' : activeCommSubTab}
+                  </span>
+                </>
+              )}
+              {activeTab === 'work' && (
+                <>
+                  <ChevronRight className="h-3 w-3" />
+                  <span className="text-blue-600 dark:text-blue-400 font-bold capitalize">
+                    {activeWorkSubTab}
+                  </span>
+                </>
+              )}
+              {activeTab === 'documents' && (
+                <>
+                  <ChevronRight className="h-3 w-3" />
+                  <span className="text-blue-600 dark:text-blue-400 font-bold capitalize">
+                    {activeDocSubTab}
+                  </span>
+                </>
+              )}
             </div>
 
             {/* Global Search shortcut button */}
@@ -517,11 +652,20 @@ export default function App() {
 
             {/* Theme Toggle Button */}
             <button
-              onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-              title={`Switch to ${resolvedTheme === 'dark' ? 'Light' : 'Dark'} Mode`}
-              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer border border-transparent dark:border-slate-800"
+              onClick={() => {
+                const nextTheme = theme === 'classic' ? 'midnight' : (theme === 'midnight' ? 'light' : 'classic');
+                setTheme(nextTheme);
+              }}
+              title={`Switch Theme (Current: ${theme === 'classic' ? 'Work OS Classic' : theme === 'midnight' ? 'Midnight' : 'Light'})`}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer border border-transparent dark:border-slate-800 flex items-center justify-center"
             >
-              {resolvedTheme === 'dark' ? <Sun className="h-4.5 w-4.5 text-amber-500" /> : <Moon className="h-4.5 w-4.5 text-blue-600" />}
+              {theme === 'midnight' ? (
+                <Moon className="h-4.5 w-4.5 text-emerald-400" />
+              ) : theme === 'light' ? (
+                <Sun className="h-4.5 w-4.5 text-amber-500" />
+              ) : (
+                <Sparkles className="h-4.5 w-4.5 text-blue-600" />
+              )}
             </button>
 
             {/* Notifications Bell */}
@@ -595,141 +739,204 @@ export default function App() {
 
         {/* Workspace Dynamic Viewer */}
         <div className="flex-1 flex overflow-hidden">
-          <main className="flex-1 overflow-hidden p-6 sm:p-8">
-            {activeTab === 'dashboard' && (
-              <Dashboard 
-                stats={stats}
-                activities={activities}
-                meetings={meetings}
-                onAction={handleDashboardAction}
-                onNavigate={handleDeepNavigate}
-                syncLoading={syncLoading}
-                onSync={handleSyncYahoo}
-                emails={emails}
-                tasks={tasks}
-                projects={projects}
-                customers={customers}
-                rfqs={rfqs}
-                drawings={drawings}
-                quotations={quotations}
-                invoices={invoices}
-                pos={pos}
-              />
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Top Sub-navigation bar for grouped tabs */}
+            {['communications', 'work', 'documents'].includes(activeTab) && (
+              <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-2.5 flex items-center gap-1 shrink-0 animate-fade-in transition-colors duration-200">
+                {activeTab === 'communications' && [
+                  { id: 'email', label: 'Email Center', icon: Mail, badge: emails.filter(e => e.unread && !e.deleted).length },
+                  { id: 'whatsapp', label: 'WhatsApp AI', icon: Phone },
+                  { id: 'calendar', label: 'Calendar', icon: Calendar }
+                ].map(sub => (
+                  <button
+                    key={sub.id}
+                    onClick={() => setActiveCommSubTab(sub.id)}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all duration-150 cursor-pointer ${activeCommSubTab === sub.id ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-bold border border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 border border-transparent'}`}
+                  >
+                    <sub.icon className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                    <span>{sub.label}</span>
+                    {sub.badge && sub.badge > 0 ? (
+                      <span className="text-[10px] bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400 px-1.5 py-0.5 rounded-full font-bold ml-1">
+                        {sub.badge}
+                      </span>
+                    ) : null}
+                  </button>
+                ))}
+
+                {activeTab === 'work' && [
+                  { id: 'tasks', label: 'Task Manager', icon: CheckSquare, badge: tasks.filter(t => t.status !== 'Completed').length },
+                  { id: 'projects', label: 'Projects', icon: Briefcase },
+                  { id: 'engineering', label: 'Engineering', icon: Cpu },
+                  { id: 'automations', label: 'Automations', icon: Layers }
+                ].map(sub => (
+                  <button
+                    key={sub.id}
+                    onClick={() => setActiveWorkSubTab(sub.id)}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all duration-150 cursor-pointer ${activeWorkSubTab === sub.id ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-bold border border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 border border-transparent'}`}
+                  >
+                    <sub.icon className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                    <span>{sub.label}</span>
+                    {sub.badge && sub.badge > 0 ? (
+                      <span className="text-[10px] bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400 px-1.5 py-0.5 rounded-full font-bold ml-1">
+                        {sub.badge}
+                      </span>
+                    ) : null}
+                  </button>
+                ))}
+
+                {activeTab === 'documents' && [
+                  { id: 'files', label: 'Files Vault', icon: Folder },
+                  { id: 'notes', label: 'Notes Hub', icon: FileText },
+                  { id: 'logs', label: 'System Logs', icon: Terminal }
+                ].map(sub => (
+                  <button
+                    key={sub.id}
+                    onClick={() => setActiveDocSubTab(sub.id)}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all duration-150 cursor-pointer ${activeDocSubTab === sub.id ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-bold border border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 border border-transparent'}`}
+                  >
+                    <sub.icon className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                    <span>{sub.label}</span>
+                  </button>
+                ))}
+              </div>
             )}
 
-            {activeTab === 'whatsapp' && (
-              <WhatsappCenter 
-                emails={emails}
-                tasks={tasks}
-                projects={projects}
-                customers={customers}
-                rfqs={rfqs}
-                drawings={drawings}
-                quotations={quotations}
-                invoices={invoices}
-                pos={pos}
-                onNavigate={handleDeepNavigate}
-              />
-            )}
+            <main className="flex-1 overflow-hidden p-6 sm:p-8">
+              {activeTab === 'dashboard' && (
+                <Dashboard 
+                  stats={stats}
+                  activities={activities}
+                  meetings={meetings}
+                  onAction={handleDashboardAction}
+                  onNavigate={handleDeepNavigate}
+                  syncLoading={syncLoading}
+                  onSync={handleSyncYahoo}
+                  emails={emails}
+                  tasks={tasks}
+                  projects={projects}
+                  customers={customers}
+                  rfqs={rfqs}
+                  drawings={drawings}
+                  quotations={quotations}
+                  invoices={invoices}
+                  pos={pos}
+                />
+              )}
 
-            {activeTab === 'email' && (
-              <EmailCenter 
-                emails={emails}
-                selectedEmailId={selectedEmailId}
-                onSelectEmail={setSelectedEmailId}
-                onUpdateEmail={handleUpdateEmail}
-                onForceAnalyze={handleForceAnalyze}
-                onNavigate={handleDeepNavigate}
-                onSync={handleSyncYahoo}
-                syncLoading={syncLoading}
-                tasks={tasks}
-                projects={projects}
-              />
-            )}
+              {activeTab === 'communications' && activeCommSubTab === 'whatsapp' && (
+                <WhatsappCenter 
+                  emails={emails}
+                  tasks={tasks}
+                  projects={projects}
+                  customers={customers}
+                  rfqs={rfqs}
+                  drawings={drawings}
+                  quotations={quotations}
+                  invoices={invoices}
+                  pos={pos}
+                  onNavigate={handleDeepNavigate}
+                />
+              )}
 
-            {activeTab === 'tasks' && (
-              <TaskManager 
-                tasks={tasks}
-                customers={customers}
-                projects={projects}
-                onCreateTask={handleCreateTask}
-                onUpdateTask={handleUpdateTask}
-                onDeleteTask={handleDeleteTask}
-                onNavigate={handleDeepNavigate}
-              />
-            )}
+              {activeTab === 'communications' && activeCommSubTab === 'email' && (
+                <EmailCenter 
+                  emails={emails}
+                  selectedEmailId={selectedEmailId}
+                  onSelectEmail={setSelectedEmailId}
+                  onUpdateEmail={handleUpdateEmail}
+                  onForceAnalyze={handleForceAnalyze}
+                  onNavigate={handleDeepNavigate}
+                  onSync={handleSyncYahoo}
+                  syncLoading={syncLoading}
+                  tasks={tasks}
+                  projects={projects}
+                />
+              )}
 
-            {activeTab === 'projects' && (
-              <Projects 
-                projects={projects}
-                customers={customers}
-                selectedProjectId={selectedProjectId}
-                onSelectProject={setSelectedProjectId}
-                onCreateProject={handleCreateProject}
-                onNavigate={handleDeepNavigate}
-              />
-            )}
+              {activeTab === 'work' && activeWorkSubTab === 'tasks' && (
+                <TaskManager 
+                  tasks={tasks}
+                  customers={customers}
+                  projects={projects}
+                  onCreateTask={handleCreateTask}
+                  onUpdateTask={handleUpdateTask}
+                  onDeleteTask={handleDeleteTask}
+                  onNavigate={handleDeepNavigate}
+                />
+              )}
 
-            {activeTab === 'engineering' && (
-              <EngineeringWorkspace 
-                customers={customers}
-                projects={projects}
-                onNavigate={handleDeepNavigate}
-              />
-            )}
+              {activeTab === 'work' && activeWorkSubTab === 'projects' && (
+                <Projects 
+                  projects={projects}
+                  customers={customers}
+                  selectedProjectId={selectedProjectId}
+                  onSelectProject={setSelectedProjectId}
+                  onCreateProject={handleCreateProject}
+                  onNavigate={handleDeepNavigate}
+                />
+              )}
 
-            {activeTab === 'customers' && (
-              <Customers 
-                customers={customers}
-                selectedCustomerId={selectedCustomerId}
-                onSelectCustomer={setSelectedCustomerId}
-                onCreateCustomer={handleCreateCustomer}
-                onNavigate={handleDeepNavigate}
-              />
-            )}
+              {activeTab === 'work' && activeWorkSubTab === 'engineering' && (
+                <EngineeringWorkspace 
+                  customers={customers}
+                  projects={projects}
+                  onNavigate={handleDeepNavigate}
+                />
+              )}
 
-            {activeTab === 'calendar' && (
-              <CalendarView 
-                meetings={meetings}
-                tasks={tasks}
-                customers={customers}
-                onCreateMeeting={handleCreateMeeting}
-              />
-            )}
+              {activeTab === 'crm' && (
+                <Customers 
+                  customers={customers}
+                  selectedCustomerId={selectedCustomerId}
+                  onSelectCustomer={setSelectedCustomerId}
+                  onCreateCustomer={handleCreateCustomer}
+                  onNavigate={handleDeepNavigate}
+                />
+              )}
 
-            {activeTab === 'notes' && (
-              <NotesHub 
-                customers={customers}
-                projects={projects}
-              />
-            )}
+              {activeTab === 'communications' && activeCommSubTab === 'calendar' && (
+                <CalendarView 
+                  meetings={meetings}
+                  tasks={tasks}
+                  customers={customers}
+                  onCreateMeeting={handleCreateMeeting}
+                />
+              )}
 
-            {activeTab === 'files' && (
-              <FilesVault 
-                customers={customers}
-                projects={projects}
-              />
-            )}
+              {activeTab === 'documents' && activeDocSubTab === 'notes' && (
+                <NotesHub 
+                  customers={customers}
+                  projects={projects}
+                />
+              )}
 
-            {activeTab === 'automations' && (
-              <Automations />
-            )}
+              {activeTab === 'documents' && activeDocSubTab === 'files' && (
+                <FilesVault 
+                  customers={customers}
+                  projects={projects}
+                />
+              )}
 
-            {activeTab === 'logs' && (
-              <SystemLogs />
-            )}
+              {activeTab === 'work' && activeWorkSubTab === 'automations' && (
+                <Automations />
+              )}
 
-            {activeTab === 'assistant' && (
-              <AiAssistant 
-                initialPrompt={tabParam?.initPrompt || null}
-                onNavigate={handleDeepNavigate}
-              />
-            )}
+              {activeTab === 'documents' && activeDocSubTab === 'logs' && (
+                <SystemLogs />
+              )}
 
-            {activeTab === 'settings' && (
-              <SettingsPanel />
-            )}
-          </main>
+              {activeTab === 'ai' && (
+                <AiAssistant 
+                  initialPrompt={tabParam?.initPrompt || null}
+                  onNavigate={handleDeepNavigate}
+                />
+              )}
+
+              {activeTab === 'settings' && (
+                <SettingsPanel />
+              )}
+            </main>
+          </div>
 
           {/* Collapsible Right AI Panel */}
           <RightAiPanel 

@@ -703,7 +703,7 @@ export default function EmailCenter({
                   <button
                     onClick={() => handleSuggestReply(selectedEmail.id)}
                     disabled={suggestingReply}
-                    className="text-xs font-bold px-2.5 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg shadow-sm disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+                    className="text-xs font-bold px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs disabled:opacity-50 flex items-center gap-1 cursor-pointer"
                   >
                     <RefreshCw className={`h-3 w-3 ${suggestingReply ? 'animate-spin' : ''}`} />
                     Formulate Draft
@@ -888,7 +888,7 @@ export default function EmailCenter({
               </div>
 
               {selectedEmail.aiAnalysis ? (
-                <div className="bg-gradient-to-br from-blue-50/60 to-indigo-50/30 dark:from-slate-900 dark:to-slate-900 border border-blue-100/60 dark:border-slate-800/80 rounded-2xl p-5 space-y-4 shadow-sm relative overflow-hidden">
+                <div className="bg-blue-50/40 dark:bg-slate-900 border border-blue-100/60 dark:border-slate-800/80 rounded-2xl p-5 space-y-4 shadow-xs relative overflow-hidden">
                   
                   {/* Summary row */}
                   <div className="space-y-1">

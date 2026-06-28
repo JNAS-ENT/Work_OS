@@ -5,7 +5,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-type Theme = 'light' | 'dark' | 'system';
+export type Theme = 'classic' | 'midnight' | 'light';
 
 interface ThemeContextProps {
   theme: Theme;
@@ -18,7 +18,7 @@ const ThemeContext = createContext<ThemeContextProps | undefined>(undefined);
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     const saved = localStorage.getItem('work_os_theme');
-    return (saved as Theme) || 'system';
+    return (saved as Theme) || 'classic';
   });
 
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
@@ -32,16 +32,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const root = window.document.documentElement;
     
     const updateTheme = () => {
-      let resolved: 'light' | 'dark' = 'light';
-      
-      if (theme === 'system') {
-        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        resolved = systemPrefersDark ? 'dark' : 'light';
-      } else {
-        resolved = theme === 'dark' ? 'dark' : 'light';
-      }
-
+      const resolved = theme === 'midnight' ? 'dark' : 'light';
       setResolvedTheme(resolved);
+
+      root.removeAttribute('data-theme');
+      root.setAttribute('data-theme', theme);
 
       if (resolved === 'dark') {
         root.classList.add('dark');
@@ -53,14 +48,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     };
 
     updateTheme();
-
-    // Listen to system changes if theme is system
-    if (theme === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const listener = () => updateTheme();
-      mediaQuery.addEventListener('change', listener);
-      return () => mediaQuery.removeEventListener('change', listener);
-    }
   }, [theme]);
 
   return (

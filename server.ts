@@ -1876,6 +1876,97 @@ async function startServer() {
   
   // Initialize dynamic database connection
   await databaseService.initialize();
+
+  // Ensure default/preset users exist in db
+  try {
+    const db = readDb();
+    const defaultUsers: User[] = [
+      {
+        id: 'usr_admin',
+        name: 'Admin',
+        email: 'shaikh.jnas@gmail.com',
+        role: 'admin',
+        password: '1@mJilanee',
+        status: 'Active',
+        company: 'Geometric Suite',
+        timezone: 'UTC',
+        language: 'English',
+        themePreference: 'dark',
+        createdAt: new Date().toISOString(),
+        connectedMailAccounts: []
+      },
+      {
+        id: 'usr_sarah',
+        name: 'Sarah (Operations Manager)',
+        email: 'sarah.mgr@workos.com',
+        role: 'manager',
+        password: 'managerpassword',
+        status: 'Active',
+        company: 'Geometric Suite',
+        timezone: 'UTC',
+        language: 'English',
+        themePreference: 'dark',
+        createdAt: new Date().toISOString(),
+        connectedMailAccounts: []
+      },
+      {
+        id: 'usr_alex',
+        name: 'Alex (Technical Engineer)',
+        email: 'alex.eng@workos.com',
+        role: 'user',
+        password: 'userpassword',
+        status: 'Active',
+        company: 'Geometric Suite',
+        timezone: 'UTC',
+        language: 'English',
+        themePreference: 'dark',
+        createdAt: new Date().toISOString(),
+        connectedMailAccounts: []
+      },
+      {
+        id: 'usr_guest',
+        name: 'Guest Inspector',
+        email: 'guest.viewer@external.com',
+        role: 'viewer',
+        password: 'guestpassword',
+        status: 'Active',
+        company: 'Geometric Suite',
+        timezone: 'UTC',
+        language: 'English',
+        themePreference: 'dark',
+        createdAt: new Date().toISOString(),
+        connectedMailAccounts: []
+      }
+    ];
+
+    let dbUpdated = false;
+    defaultUsers.forEach(defUser => {
+      const idx = db.users.findIndex(u => u.email.toLowerCase() === defUser.email.toLowerCase());
+      if (idx === -1) {
+        db.users.push(defUser);
+        dbUpdated = true;
+      } else {
+        // Update password/name/role in case it changed or was reset
+        if (
+          db.users[idx].password !== defUser.password || 
+          db.users[idx].name !== defUser.name ||
+          db.users[idx].role !== defUser.role
+        ) {
+          db.users[idx].password = defUser.password;
+          db.users[idx].name = defUser.name;
+          db.users[idx].role = defUser.role;
+          dbUpdated = true;
+        }
+      }
+    });
+
+    if (dbUpdated) {
+      writeDb(db);
+      console.log('[Work OS Server] Default preset users seeded/updated successfully.');
+    }
+  } catch (err: any) {
+    console.error('[Work OS Server] Error seeding preset users:', err.message);
+  }
   
   // Serve dynamic Vite development assets when in dev mode
   if (process.env.NODE_ENV !== 'production') {
@@ -1895,6 +1986,21 @@ async function startServer() {
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`[Work OS Server] Live and running on http://0.0.0.0:${PORT}`);
+
+    // Background Service: Auto Monitoring every 10 minutes
+    import('./server/services/HealthChecker').then(({ HealthChecker }) => {
+      console.log('[Work OS Monitor] Initializing automated background checks...');
+      // Run immediately on boot
+      HealthChecker.scanAll().catch(err => console.error('[Work OS Monitor] Initial scan failed:', err));
+
+      // Schedule check every 10 minutes (600,000 ms)
+      setInterval(() => {
+        console.log('[Work OS Monitor] Running scheduled background health checks...');
+        HealthChecker.scanAll().catch(err => console.error('[Work OS Monitor] Scheduled scan failed:', err));
+      }, 600000);
+    }).catch(err => {
+      console.error('[Work OS Monitor] Failed to load HealthChecker:', err);
+    });
   });
 }
 

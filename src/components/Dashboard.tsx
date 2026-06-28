@@ -184,14 +184,14 @@ export default function Dashboard({
     <div className="space-y-6">
       
       {/* Top Banner section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-6 rounded-2xl shadow-sm relative overflow-hidden border border-slate-800">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-blue-900 text-white p-6 rounded-2xl shadow-xs relative overflow-hidden border border-blue-950">
         <div className="relative z-10 space-y-1">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-indigo-500/20 text-indigo-200 border border-indigo-400/20 rounded-full text-[10px] font-bold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-blue-100/10 text-blue-100 border border-blue-200/20 rounded-full text-[10px] font-bold uppercase tracking-wider">
             <Sparkles className="h-3 w-3 animate-pulse" />
             Operations Control Center
           </div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Engineering Work OS Action Center</h1>
-          <p className="text-slate-300 text-sm max-w-xl font-normal">
+          <p className="text-blue-100/80 text-sm max-w-xl font-normal">
             No forgotten customer emails, no missed SLA targets. Below are your real-time outstanding deliverables and communication pipelines needing immediate attention.
           </p>
         </div>
@@ -199,25 +199,25 @@ export default function Dashboard({
           <button 
             onClick={onSync}
             disabled={syncLoading}
-            className={`flex items-center gap-2 px-4 py-2.5 bg-white text-indigo-900 hover:bg-slate-100 transition rounded-xl font-semibold text-sm shadow-xs ${syncLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+            className={`flex items-center gap-2 px-4 py-2.5 bg-white text-blue-900 hover:bg-slate-100 transition rounded-xl font-semibold text-sm shadow-xs cursor-pointer ${syncLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
             {syncLoading ? (
-              <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-900"></span>
+              <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-900"></span>
             ) : (
-              <Sparkles className="h-4 w-4 text-indigo-600" />
+              <Sparkles className="h-4 w-4 text-blue-600" />
             )}
             {syncLoading ? 'Syncing...' : 'Yahoo Sync & AI Triage'}
           </button>
           <button 
             onClick={() => onAction('new-task')}
-            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-700 hover:bg-indigo-800 text-white transition rounded-xl font-semibold text-sm border border-indigo-600 shadow-xs"
+            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white transition rounded-xl font-semibold text-sm border border-blue-700 shadow-xs cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             Manual Action Item
           </button>
         </div>
         {/* Background visual graphics */}
-        <div className="absolute right-0 top-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute right-0 top-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
       </div>
 
       {/* KPI Stats cards */}

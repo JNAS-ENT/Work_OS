@@ -117,8 +117,8 @@ export interface Task {
   description: string;
   customerId?: string;
   projectId?: string;
-  priority: 'High' | 'Medium' | 'Low';
-  status: 'Pending' | 'In Progress' | 'Waiting' | 'Completed' | 'Cancelled';
+  priority: 'Today' | 'Critical' | 'High' | 'Medium' | 'Low' | 'Later' | string;
+  status: 'Pending' | 'In Progress' | 'Review' | 'Completed' | 'Waiting' | 'Cancelled' | string;
   dueDate: string;
   reminder?: string;
   assignedTo?: string;
@@ -129,6 +129,7 @@ export interface Task {
   checklist: TaskChecklistItem[];
   tags: string[];
   createdAt: string;
+  columnOrder?: number;
 }
 
 export interface Note {
@@ -421,6 +422,16 @@ export interface ServiceConnection {
   storageUsed?: string;
   syncPaused?: boolean;
   createdAt: string;
+  oauthStatus?: string;
+  tokenExpiry?: string;
+  refreshTokenStatus?: string;
+  lastSuccessSyncAt?: string;
+  lastFailedSyncAt?: string;
+  apiResponseTime?: number;
+  healthScore?: number;
+  permissions?: string[];
+  version?: string;
+  quotaUsage?: string;
 }
 
 export interface OAuthToken {

@@ -35,11 +35,67 @@ export default function WhatsappCenter({
   emails, tasks, projects, customers, rfqs, drawings, quotations, invoices, pos, onNavigate
 }: WhatsappCenterProps) {
   // Connections
-  const [accounts, setAccounts] = useState([
-    { id: 'wa-1', name: 'Work OS Sales Desk', number: '+1 (555) 934-2920', status: 'Connected', health: 'Excellent', lastSync: '1 min ago' },
-    { id: 'wa-2', name: 'Factory Dispatch Core', number: '+1 (555) 231-5089', status: 'Connected', health: 'Optimal', lastSync: '5 mins ago' },
-    { id: 'wa-3', name: 'Admin Personal Bridge', number: '+1 (555) 441-0012', status: 'Disconnected', health: 'None', lastSync: 'Never' }
-  ]);
+  const [connections, setConnections] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [newConnName, setNewConnName] = useState('Work OS WhatsApp Desk');
+  const [newConnNumber, setNewConnNumber] = useState('');
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  const fetchConnections = () => {
+    fetch('/api/integrations/connections')
+      .then(res => res.json())
+      .then(data => {
+        setConnections(data || []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    fetchConnections();
+  }, []);
+
+  const waConnections = connections.filter((c: any) => c.providerId === 'whatsapp');
+
+  const accountsList = waConnections.map((c: any) => ({
+    id: c.id,
+    name: c.name || 'WhatsApp Bridge',
+    number: c.email || '+1 (555) 934-2920',
+    status: c.status || 'Connected',
+    health: c.health || 'Excellent',
+    lastSync: c.lastSyncAt ? new Date(c.lastSyncAt).toLocaleTimeString() : 'Just now'
+  }));
+
+  const handleConnectWhatsApp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newConnNumber) return;
+    setIsConnecting(true);
+    try {
+      const res = await fetch('/api/integrations/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          providerId: 'whatsapp',
+          config: {
+            name: newConnName,
+            email: newConnNumber
+          }
+        })
+      });
+      if (res.ok) {
+        setShowConnectModal(false);
+        fetchConnections();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
 
   const [connectingId, setConnectingId] = useState<string | null>(null);
   const [pairingStep, setPairingStep] = useState<number>(0); // 0: off, 1: QR code loading, 2: scan animation
@@ -224,21 +280,35 @@ ${activeRfqs.map((r, i) => `• **${r.title}** (Target: $${r.estimatedValue.toLo
     setPairingStep(1);
     setTimeout(() => {
       setPairingStep(2);
-      setTimeout(() => {
-        setAccounts(prev => prev.map(acc => acc.id === id ? { ...acc, status: 'Connected', health: 'Optimal', lastSync: 'Just now' } : acc));
+      setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/integrations/reconnect/${id}`, { method: 'POST' });
+          if (res.ok) {
+            fetchConnections();
+          }
+        } catch (err) {
+          console.error(err);
+        }
         setPairingStep(0);
         setConnectingId(null);
         // Alert notification
         setWhatsappAlerts(prev => [
-          { id: `a-${Date.now()}`, time: 'Just now', type: 'System Bridge', desc: `Successfully connected WhatsApp bridge number: +1 (555) 441-0012`, actionTaken: 'Authorized and synchronized keys', status: 'Sent' },
+          { id: `a-${Date.now()}`, time: 'Just now', type: 'System Bridge', desc: `Successfully connected WhatsApp bridge number`, actionTaken: 'Authorized and synchronized keys', status: 'Sent' },
           ...prev
         ]);
       }, 4000);
     }, 1500);
   };
 
-  const disconnectAccount = (id: string) => {
-    setAccounts(prev => prev.map(acc => acc.id === id ? { ...acc, status: 'Disconnected', health: 'None', lastSync: 'Never' } : acc));
+  const disconnectAccount = async (id: string) => {
+    try {
+      const res = await fetch(`/api/integrations/disconnect/${id}`, { method: 'POST' });
+      if (res.ok) {
+        fetchConnections();
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // Custom rules builder
@@ -348,6 +418,90 @@ ${activeRfqs.map((r, i) => `• **${r.title}** (Target: $${r.estimatedValue.toLo
     }, 2000);
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-12 text-center h-full min-h-[400px]">
+        <div className="space-y-3">
+          <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Loading WhatsApp Integrations...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (waConnections.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center bg-slate-50/10 dark:bg-slate-950/10 space-y-6 h-full min-h-[400px] border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl relative">
+        <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900 rounded-2xl flex items-center justify-center text-emerald-500 shadow-xs">
+          <MessageSquare className="h-8 w-8 text-emerald-500" />
+        </div>
+        <div className="max-w-md space-y-2">
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">WhatsApp Business is not connected</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            Integrate an official WhatsApp Business API channel to dispatch real-time morning operational briefings, automate escalation warnings, and build custom workflow dispatch channels.
+          </p>
+        </div>
+        <button 
+          onClick={() => setShowConnectModal(true)}
+          className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-xs flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Connect WhatsApp
+        </button>
+
+        {showConnectModal && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+            <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-xl text-left space-y-4">
+              <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Link WhatsApp Business Channel</h3>
+                <button onClick={() => setShowConnectModal(false)} className="text-xs text-slate-400 hover:text-slate-500 font-bold">Close</button>
+              </div>
+              <form onSubmit={handleConnectWhatsApp} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Channel Name</label>
+                  <input 
+                    type="text" 
+                    value={newConnName}
+                    onChange={(e) => setNewConnName(e.target.value)}
+                    className="w-full text-xs p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900 focus:outline-none dark:text-white"
+                    placeholder="e.g. Work OS Sales Desk"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">WhatsApp Phone Number</label>
+                  <input 
+                    type="text" 
+                    value={newConnNumber}
+                    onChange={(e) => setNewConnNumber(e.target.value)}
+                    required
+                    className="w-full text-xs p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900 focus:outline-none dark:text-white"
+                    placeholder="e.g. +1 (555) 934-2920"
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button 
+                    type="button" 
+                    onClick={() => setShowConnectModal(false)}
+                    className="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={isConnecting}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold disabled:opacity-50"
+                  >
+                    {isConnecting ? 'Linking...' : 'Establish Bridge'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 h-[calc(100vh-140px)] overflow-y-auto pr-1">
       
@@ -381,7 +535,7 @@ ${activeRfqs.map((r, i) => `• **${r.title}** (Target: $${r.estimatedValue.toLo
             <p className="text-xs text-slate-400">Configure phone numbers, system-authorized tokens, and device status</p>
             
             <div className="space-y-3">
-              {accounts.map(acc => {
+              {accountsList.map(acc => {
                 const isConnected = acc.status === 'Connected';
                 return (
                   <div key={acc.id} className="p-4 border border-slate-100 rounded-xl space-y-2 hover:border-blue-100 transition">

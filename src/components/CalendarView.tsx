@@ -402,7 +402,7 @@ export default function CalendarView({
 
             <button
               onClick={() => setShowAiScheduler(!showAiScheduler)}
-              className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:opacity-95 rounded-xl transition text-[11px] font-bold flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"
             >
               <Sparkles className="h-3.5 w-3.5" />
               AI Slot Finder
@@ -428,7 +428,7 @@ export default function CalendarView({
 
         {/* AI SMART SCHEDULER SECTION (EXPANDABLE PANEL) */}
         {showAiScheduler && (
-          <div className="mt-3 p-4 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 border border-blue-100 rounded-2xl space-y-3 relative">
+          <div className="mt-3 p-4 bg-blue-50/25 border border-blue-100 rounded-2xl space-y-3 relative">
             <div className="flex justify-between items-center">
               <h4 className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
                 <Sparkles className="h-4 w-4 text-blue-500 animate-pulse" />
@@ -652,7 +652,7 @@ export default function CalendarView({
                   <button
                     onClick={handleGenerateAiMinutes}
                     disabled={summarizing}
-                    className="py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white text-[10px] font-bold rounded-lg transition flex items-center justify-center gap-1"
+                    className="py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-[10px] font-bold rounded-lg transition flex items-center justify-center gap-1 cursor-pointer"
                   >
                     {summarizing ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                     Compile AI Minutes
@@ -663,7 +663,7 @@ export default function CalendarView({
                 <button
                   onClick={handleExtractActionItems}
                   disabled={extractingTasks}
-                  className="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-[10px] font-bold transition shrink-0 flex items-center justify-center gap-1.5 shadow-sm"
+                  className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-bold transition shrink-0 flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                 >
                   {extractingTasks ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileCheck className="h-3.5 w-3.5" />}
                   Extract Action Items & Create Tasks

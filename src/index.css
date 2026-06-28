@@ -4,6 +4,88 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", sans-serif;
+
+  /* Custom palette definitions matching the Work OS Design guidelines */
+  --color-white: #FAFCF8; /* Cards background */
+  --color-slate-50: #F3F6F2; /* Content background */
+  --color-slate-100: #EEF3EC; /* Input fields background */
+  --color-slate-200: #D5DED3; /* Borders */
+  --color-slate-300: #BCC7BB;
+  --color-slate-400: #8C9E91;
+  --color-slate-500: #64756A; /* Secondary Text */
+  --color-slate-600: #4B5B50;
+  --color-slate-700: #38473D;
+  --color-slate-800: #2C3A34; /* Primary Text */
+  --color-slate-900: #1E2421; /* Main Background */
+  --color-slate-950: #121614;
+
+  --color-blue-50: #EEF3EC;
+  --color-blue-100: #C1E4D3;
+  --color-blue-200: #A2D19D; /* Soft Pistachio Green */
+  --color-blue-300: #8EB78A;
+  --color-blue-400: #153E2D;
+  --color-blue-500: #1D5740; /* Pantone 555-inspired dark green */
+  --color-blue-600: #1D5740; /* Pantone 555-inspired dark green */
+  --color-blue-700: #15402F;
+  --color-blue-800: #0E2B1F;
+}
+
+:root {
+  /* Default Theme matching the user's Work OS requirements */
+  --blue-50: #EEF3EC;
+  --blue-100: #A2D19D; /* Soft Pistachio Green */
+  --blue-200: #8EB78A;
+  --blue-300: #1D5740; /* Pantone 555 Green */
+  --blue-400: #15402F;
+  --blue-50: #1D5740;
+  --blue-600: #1D5740;
+  --blue-700: #15402F;
+  --blue-800: #0E2B1F;
+  --blue-900: #1E2421;
+  --blue-950: #121614;
+
+  --neutral-50: #1E2421;  /* Main Background */
+  --neutral-100: #F3F6F2; /* Content Background */
+  --neutral-200: #FAFCF8; /* Cards */
+  --neutral-300: #EEF3EC; /* Input Fields */
+  --neutral-400: #D5DED3; /* Borders */
+  --neutral-500: #64756A; /* Secondary Text */
+  --neutral-600: #4B5B50;
+  --neutral-700: #38473D;
+  --neutral-800: #2C3A34; /* Primary Text */
+  --neutral-900: #2C3A34; /* Primary Text */
+  --neutral-950: #1E2421;
+}
+
+html {
+  background-color: #1E2421;
+}
+
+/* Ensure consistent theme for HTML attribute toggles as well */
+html[data-theme="classic"], html[data-theme="midnight"], html[data-theme="light"] {
+  --blue-50: #EEF3EC;
+  --blue-100: #A2D19D;
+  --blue-200: #8EB78A;
+  --blue-300: #1D5740;
+  --blue-400: #15402F;
+  --blue-500: #1D5740;
+  --blue-600: #1D5740;
+  --blue-700: #15402F;
+  --blue-800: #0E2B1F;
+  --blue-900: #1E2421;
+  --blue-950: #121614;
+
+  --neutral-50: #1E2421;  /* Main Background */
+  --neutral-100: #F3F6F2; /* Content Background */
+  --neutral-200: #FAFCF8; /* Cards */
+  --neutral-300: #EEF3EC; /* Input Fields */
+  --neutral-400: #D5DED3; /* Borders */
+  --neutral-500: #64756A; /* Secondary Text */
+  --neutral-600: #4B5B50;
+  --neutral-700: #38473D;
+  --neutral-800: #2C3A34; /* Primary Text */
+  --neutral-900: #2C3A34; /* Primary Text */
+  --neutral-950: #1E2421;
 }
 
 /* Custom crisp, minimalist scrollbar styling matching Geometric Balance */
@@ -17,10 +99,29 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #D5DED3;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #BCC7BB;
+}
+
+/* Clean, modern and premium global resets and utility styles */
+body {
+  font-family: var(--font-sans);
+  background-color: #1E2421; /* Main Background */
+  color: #2C3A34; /* Primary Text */
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-sans);
+  letter-spacing: -0.02em;
+}
+
+/* Ensure smooth, modern focus outlines */
+input:focus, select:focus, textarea:focus {
+  border-color: #1D5740 !important;
+  box-shadow: 0 0 0 2px #A2D19D !important;
 }
