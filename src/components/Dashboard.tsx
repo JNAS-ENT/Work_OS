@@ -229,12 +229,12 @@ export default function Dashboard({
               key={i} 
               id={`kpi-card-${card.id}`}
               onClick={() => onNavigate(card.tab)}
-              className="bg-white border border-slate-200 hover:border-indigo-500 cursor-pointer p-5 rounded-2xl transition shadow-xs hover:shadow-md group flex items-start justify-between"
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 cursor-pointer p-5 rounded-2xl transition shadow-xs hover:shadow-md group flex items-start justify-between"
             >
               <div className="space-y-1">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{card.title}</p>
-                <h3 className="text-3xl font-bold text-slate-800 tracking-tight">{card.value}</h3>
-                <p className="text-[11px] text-slate-400 font-medium">{card.desc}</p>
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{card.title}</p>
+                <h3 className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">{card.value}</h3>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">{card.desc}</p>
               </div>
               <div className={`p-3 rounded-xl border ${card.color} transition-transform group-hover:scale-105`}>
                 <Icon className="h-5 w-5" />

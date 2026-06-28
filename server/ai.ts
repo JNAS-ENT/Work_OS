@@ -267,3 +267,43 @@ However, based on your local database, you have:
 
 How else can I help you today?`;
 }
+
+export async function getAiReplySuggestion(emailSubject: string, emailBody: string, tone: string = 'Professional'): Promise<string> {
+  const client = getAiClient();
+  if (!client) {
+    return `Subject: Re: ${emailSubject}
+
+Dear Customer,
+
+Thank you for contacting our engineering team. We have received your message regarding "${emailSubject}" and are currently reviewing your request.
+
+Our specialists are analyzing the specifications and drawings to formulate a comprehensive response. We will get back to you with a formal update as soon as possible.
+
+Best regards,
+Engineering Operations Team
+Geometric Suite`;
+  }
+
+  const systemInstruction = `You are an elite enterprise communication assistant for Geometric Suite Work OS.
+Given the subject and body of an incoming email, draft a precise, professional, and context-aware response email in a "${tone}" tone.
+Make sure the reply addresses the core points, asks for any clarification if necessary, and maintains a clean corporate layout.
+Only return the response text (subject line and message body), do not wrap it in markdown block quotes.`;
+
+  const prompt = `Subject: ${emailSubject}\n\nIncoming Email Body:\n${emailBody}`;
+
+  try {
+    const response = await client.models.generateContent({
+      model: 'gemini-3.5-flash',
+      contents: prompt,
+      config: {
+        systemInstruction,
+      }
+    });
+    return response.text || "Could not generate reply.";
+  } catch (error: any) {
+    console.error('Gemini draft reply generation failed:', error);
+    return `Subject: Re: ${emailSubject}
+
+Thank you for your message. We are reviewing your request and will follow up shortly.`;
+  }
+}

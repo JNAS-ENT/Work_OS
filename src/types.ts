@@ -7,7 +7,21 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'manager' | 'user';
+  role: 'admin' | 'manager' | 'user' | 'viewer' | 'guest';
+  password?: string;
+  phone?: string;
+  photo?: string;
+  department?: string;
+  designation?: string;
+  company?: string;
+  timezone?: string;
+  language?: string;
+  themePreference?: 'light' | 'dark' | 'system';
+  status?: 'Active' | 'Locked' | 'Expired' | 'Inactive';
+  failedLoginAttempts?: number;
+  passwordExpiry?: string;
+  createdAt?: string;
+  connectedMailAccounts?: string[];
 }
 
 export interface Customer {
@@ -39,6 +53,12 @@ export interface Email {
   aiAnalysis?: AiAnalysis;
   threadId?: string;
   attachments?: Attachment[];
+  
+  // Mail Center & AI Follow-Up additions
+  mailAccountId?: string;
+  isDraft?: boolean;
+  scheduledSendTime?: string;
+  replyIntelligence?: ReplyIntelligence;
 }
 
 export interface AiAnalysis {
@@ -300,5 +320,61 @@ export interface EmailThread {
   customerId?: string;
   projectId?: string;
   priority: 'High' | 'Medium' | 'Low';
+}
+
+export interface ReplyIntelligence {
+  replyStatus: 'New' | 'Unread' | 'Read' | 'Reply Needed' | 'Waiting Customer' | 'Waiting Internal Team' | 'Follow-up Required' | 'Replied' | 'Resolved';
+  lastActivityTime: string;
+  waitingSince?: string;
+  followUpCount: number;
+  priorityScore: number; // 0 to 100
+  escalationFlag: boolean;
+  aiResponseSuggestion?: string;
+  timelineEvents?: {
+    id: string;
+    type: string;
+    description: string;
+    timestamp: string;
+  }[];
+}
+
+export interface MailAccount {
+  id: string;
+  name: string;
+  email: string;
+  provider: 'gmail' | 'yahoo' | 'outlook' | 'imap';
+  syncStatus: 'idle' | 'syncing' | 'error' | 'success';
+  lastSyncedAt?: string;
+  storageUsed?: string; // e.g. "2.4 GB of 15 GB"
+  isDefault: boolean;
+  isActive: boolean;
+}
+
+export interface UserSession {
+  id: string;
+  userId: string;
+  device: string;
+  browser: string;
+  ipAddress: string;
+  loginTime: string;
+  lastActiveTime: string;
+  status: 'Active' | 'Terminated';
+}
+
+export interface AuditLog {
+  id: string;
+  userId?: string;
+  userName?: string;
+  action: string; // e.g. "LOGIN", "FAILED_LOGIN", "ROLE_CHANGE", "SETTINGS_UPDATE"
+  details: string;
+  ipAddress?: string;
+  device?: string;
+  timestamp: string;
+}
+
+export interface RolePermission {
+  id: string;
+  roleName: 'admin' | 'manager' | 'user' | 'viewer' | 'guest';
+  permissions: string[]; // list of permissions like 'view_logs', 'delete_task', etc.
 }
 

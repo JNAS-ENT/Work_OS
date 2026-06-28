@@ -8,7 +8,9 @@ import {
   Plus, CheckCircle2, XCircle, Clock, FileText, Settings, 
   Layers, ChevronRight, Sliders, Play, RotateCw, Eye, Sparkles,
   FileCode, Cpu, ShieldAlert, DollarSign, Calendar, Wrench, FileCheck, 
-  Send, Hammer, ListFilter, RotateCcw, Box, ArrowUpRight, Maximize2
+  Send, Hammer, ListFilter, RotateCcw, Box, ArrowUpRight, Maximize2,
+  Trash2, Download, Table, Edit, RefreshCw, AlertTriangle, ChevronDown, Check,
+  BookOpen, Activity, LayoutGrid, Award, Info
 } from 'lucide-react';
 import { Customer, Project, Rfq, Drawing, Quotation, PurchaseOrder, Invoice, DrawingRevision, Ecr } from '../types';
 
@@ -18,7 +20,33 @@ interface EngineeringWorkspaceProps {
   onNavigate: (tab: string, param?: any) => void;
 }
 
-type SubTab = 'rfq' | 'drawing' | 'quote' | 'po' | 'invoice' | 'revision' | 'approval' | 'ecr' | 'cad';
+type SubTab = 
+  | 'rfq' 
+  | 'drawing' 
+  | 'quote' 
+  | 'po' 
+  | 'invoice' 
+  | 'revision' 
+  | 'approval' 
+  | 'ecr' 
+  | 'cad'
+  | 'tree'
+  | 'bom'
+  | 'production'
+  | 'ai_assistant';
+
+interface BomItem {
+  id: string;
+  partNumber: string;
+  description: string;
+  material: string;
+  quantity: number;
+  supplier: string;
+  unitCost: number;
+  weightGrams: number;
+  revision: string;
+  leadTimeDays: number;
+}
 
 export default function EngineeringWorkspace({ customers, projects, onNavigate }: EngineeringWorkspaceProps) {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('rfq');
@@ -94,6 +122,42 @@ export default function EngineeringWorkspace({ customers, projects, onNavigate }
   const [selectedDwgId, setSelectedDwgId] = useState<string | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState<boolean>(false);
   const [approvalNotes, setApprovalNotes] = useState<string>('');
+
+  // Project Tree Expanded States
+  const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({
+    'proj_1': true,
+    'assembly_main': true
+  });
+
+  // Bill of Materials (BOM) State
+  const [bomList, setBomList] = useState<BomItem[]>([
+    { id: 'b1', partNumber: 'ASM-APX-001', description: 'Main Support Core Collar', material: 'Ti-6Al-4V (Grade 5 Titanium)', quantity: 1, supplier: 'Apex Metals Co.', unitCost: 12500, weightGrams: 3500, revision: 'B', leadTimeDays: 14 },
+    { id: 'b2', partNumber: 'PIN-APX-002', description: 'Multi-axis Pivot Pin', material: 'Al7075-T6 Aerospace Aluminum', quantity: 4, supplier: 'Precision Extrusions', unitCost: 1800, weightGrams: 280, revision: 'A', leadTimeDays: 7 },
+    { id: 'b3', partNumber: 'FST-APX-103', description: 'Socket Head Cap Screw M8', material: 'SS316 Marine Stainless Steel', quantity: 12, supplier: 'Global Fasteners LLC', unitCost: 150, weightGrams: 15, revision: 'A', leadTimeDays: 3 }
+  ]);
+  const [showAddBomModal, setShowAddBomModal] = useState(false);
+  const [bomPartNo, setBomPartNo] = useState('');
+  const [bomDesc, setBomDesc] = useState('');
+  const [bomMat, setBomMat] = useState('Ti-6Al-4V');
+  const [bomQty, setBomQty] = useState(1);
+  const [bomCost, setBomCost] = useState(1200);
+  const [bomWeight, setBomWeight] = useState(500);
+
+  // Side-by-Side Revision Comparison
+  const [showCompModal, setShowCompModal] = useState(false);
+  const [compDwgId, setCompDwgId] = useState('');
+
+  // Manufacturing Tracking State
+  const [productionOrders, setProductionOrders] = useState([
+    { id: 'm1', partNo: 'ASM-APX-001', title: 'Titanium Base Roughing', machine: 'Haas CNC VF-2', operator: 'Rajesh Kumar', status: 'Machining', progress: 45, capaAlert: false },
+    { id: 'm2', partNo: 'PIN-APX-002', title: 'Pivot Pins Anodizing', machine: 'Anodize Line 3', operator: 'Anoop Singh', status: 'In QA', progress: 90, capaAlert: false },
+    { id: 'm3', partNo: 'SHL-DRN-901', title: 'Aerodynamic Shell SLS Print', machine: 'EOS P396 SLS', operator: 'Sarah Patel', status: 'Completed', progress: 100, capaAlert: false }
+  ]);
+
+  // AI Assistant Analysis cache
+  const [selectedRfqAi, setSelectedRfqAi] = useState<string | null>(null);
+  const [aiAnalysisResult, setAiAnalysisResult] = useState<any>(null);
+  const [analyzingRfq, setAnalyzingRfq] = useState(false);
 
   // Data fetching
   const fetchEngineeringData = async () => {
@@ -175,26 +239,20 @@ export default function EngineeringWorkspace({ customers, projects, onNavigate }
       // Define 3D wireframe models
       let vertices: { x: number; y: number; z: number }[] = [];
       let edges: [number, number][] = [];
-      let faces: number[][] = [];
 
       if (selectedCadFile === 'bracket') {
-        // Multi-axis turbine mount bracket 3D vertices
-        // Base plate (8 vertices)
         vertices = [
           { x: -50, y: -10, z: -40 }, { x: 50, y: -10, z: -40 }, { x: 50, y: -10, z: 40 }, { x: -50, y: -10, z: 40 },
           { x: -50, y: 0, z: -40 }, { x: 50, y: 0, z: -40 }, { x: 50, y: 0, z: 40 }, { x: -50, y: 0, z: 40 },
-          // Upright neck structure (8 vertices)
           { x: -20, y: -30, z: -20 }, { x: 20, y: -30, z: -20 }, { x: 20, y: -30, z: 20 }, { x: -20, y: -30, z: 20 },
           { x: -20, y: -50, z: -20 }, { x: 20, y: -50, z: -20 }, { x: 20, y: -50, z: 20 }, { x: -20, y: -50, z: 20 }
         ];
 
-        // Connect edges
         edges = [
           [0,1], [1,2], [2,3], [3,0], [4,5], [5,6], [6,7], [7,4],
           [0,4], [1,5], [2,6], [3,7],
           [8,9], [9,10], [10,11], [11,8], [12,13], [13,14], [14,15], [15,12],
           [8,12], [9,13], [10,14], [11,15],
-          // Blend ribs
           [4,8], [5,9], [6,10], [7,11]
         ];
 
@@ -209,12 +267,9 @@ export default function EngineeringWorkspace({ customers, projects, onNavigate }
         ctx.stroke();
 
       } else if (selectedCadFile === 'sensor') {
-        // Avionics sensor enclosure box vertices
         vertices = [
-          // Outer box
           { x: -60, y: -30, z: -30 }, { x: 60, y: -30, z: -30 }, { x: 60, y: -30, z: 30 }, { x: -60, y: -30, z: 30 },
           { x: -60, y: 15, z: -30 }, { x: 60, y: 15, z: -30 }, { x: 60, y: 15, z: 30 }, { x: -60, y: 15, z: 30 },
-          // Inner cavity
           { x: -54, y: -25, z: -25 }, { x: 54, y: -25, z: -25 }, { x: 54, y: -25, z: 25 }, { x: -54, y: -25, z: 25 },
           { x: -54, y: 15, z: -25 }, { x: 54, y: 15, z: -25 }, { x: 54, y: 15, z: 25 }, { x: -54, y: 15, z: 25 }
         ];
@@ -224,11 +279,10 @@ export default function EngineeringWorkspace({ customers, projects, onNavigate }
           [8,9], [9,10], [10,11], [11,8], [12,13], [13,14], [14,15], [15,12], [8,12], [9,13], [10,14], [11,15]
         ];
       } else {
-        // SLS Drone housing aerodynamic shell structure
         vertices = [
-          { x: 0, y: -45, z: 0 }, // apex top
-          { x: -40, y: 10, z: -40 }, { x: 40, y: 10, z: -40 }, { x: 40, y: 10, z: 40 }, { x: -40, y: 10, z: 40 }, // body
-          { x: -55, y: 20, z: -55 }, { x: 55, y: 20, z: -55 }, { x: 55, y: 20, z: 55 }, { x: -55, y: 20, z: 55 } // protective rotor guards
+          { x: 0, y: -45, z: 0 },
+          { x: -40, y: 10, z: -40 }, { x: 40, y: 10, z: -40 }, { x: 40, y: 10, z: 40 }, { x: -40, y: 10, z: 40 },
+          { x: -55, y: 20, z: -55 }, { x: 55, y: 20, z: -55 }, { x: 55, y: 20, z: 55 }, { x: -55, y: 20, z: 55 }
         ];
 
         edges = [
@@ -243,25 +297,15 @@ export default function EngineeringWorkspace({ customers, projects, onNavigate }
       if (cadExplode > 0) {
         vertices = vertices.map((v, idx) => {
           const factor = (idx >= 8) ? cadExplode * 0.4 : -cadExplode * 0.1;
-          return {
-            x: v.x,
-            y: v.y + factor,
-            z: v.z
-          };
+          return { x: v.x, y: v.y + factor, z: v.z };
         });
       }
 
       // Project 3D points to 2D isometric representation
       const projected = vertices.map(v => {
-        // Rotate around Y-axis
         let x1 = v.x * Math.cos(ry) - v.z * Math.sin(ry);
         let z1 = v.x * Math.sin(ry) + v.z * Math.cos(ry);
-
-        // Rotate around X-axis
         let y2 = v.y * Math.cos(rx) - z1 * Math.sin(rx);
-        let z2 = v.y * Math.sin(rx) + z1 * Math.cos(rx);
-
-        // Simple orthographic viewport centering projection
         const scale = 3.5;
         return {
           x: canvas.width / 2 + x1 * scale,
@@ -284,7 +328,7 @@ export default function EngineeringWorkspace({ customers, projects, onNavigate }
         }
       });
 
-      // Solid Shading projection (simulate lightweight mechanical depth)
+      // Solid Shading projection
       if (cadRenderMode === 'solid') {
         ctx.fillStyle = 'rgba(59, 130, 246, 0.05)';
         ctx.beginPath();
@@ -305,7 +349,7 @@ export default function EngineeringWorkspace({ customers, projects, onNavigate }
       }
 
       // Draw vertices / anchors
-      projected.forEach((p, idx) => {
+      projected.forEach((p) => {
         ctx.fillStyle = cadRenderMode === 'blueprint' ? '#0ea5e9' : '#1d4ed8';
         ctx.beginPath();
         ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
@@ -325,10 +369,7 @@ export default function EngineeringWorkspace({ customers, projects, onNavigate }
   // Handle Dragging rotation on canvas
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     isDraggingRef.current = true;
-    previousMousePositionRef.current = {
-      x: e.clientX,
-      y: e.clientY
-    };
+    previousMousePositionRef.current = { x: e.clientX, y: e.clientY };
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -339,10 +380,7 @@ export default function EngineeringWorkspace({ customers, projects, onNavigate }
     rotationRef.current.y += deltaX * 0.5;
     rotationRef.current.x += deltaY * 0.5;
 
-    previousMousePositionRef.current = {
-      x: e.clientX,
-      y: e.clientY
-    };
+    previousMousePositionRef.current = { x: e.clientX, y: e.clientY };
   };
 
   const handleMouseUpOrLeave = () => {
@@ -451,9 +489,6 @@ export default function EngineeringWorkspace({ customers, projects, onNavigate }
 
       const data = await res.json();
       setQuotations(prev => [data, ...prev]);
-      
-      // Update RFQ status locally to 'Quoted'
-      setRfqs(prev => prev.map(r => r.id === rfq.id ? { ...r, status: 'Quoted' } : r));
       setShowQuoteModal(false);
       // Reset
       setQuoteRfqId('');
@@ -469,10 +504,10 @@ export default function EngineeringWorkspace({ customers, projects, onNavigate }
 
   const handleCreatePo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!poNumVal.trim() || !poQuoteId) return;
+    if (!poQuoteId || !poNumVal) return;
 
-    const quote = quotations.find(q => q.id === poQuoteId);
-    if (!quote) return;
+    const q = quotations.find(qt => qt.id === poQuoteId);
+    if (!q) return;
 
     try {
       setSubmitting(true);
@@ -480,20 +515,18 @@ export default function EngineeringWorkspace({ customers, projects, onNavigate }
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          poNumber: poNumVal,
-          quoteId: poQuoteId,
-          customerId: quote.customerId,
-          projectId: quote.projectId,
-          amount: poAmount || quote.amount,
-          deliveryDate: poDelivery,
-          fileUrl: poFile || `${poNumVal}_PO_Signed.pdf`
+          purchaseOrderNumber: poNumVal,
+          quotationId: poQuoteId,
+          customerId: q.customerId,
+          projectId: q.projectId,
+          amount: poAmount || q.amount,
+          targetDeliveryDate: poDelivery,
+          fileName: poFile || 'po_document_scanned.pdf'
         })
       });
 
       const data = await res.json();
       setPos(prev => [data, ...prev]);
-      // Update quote status locally to Accepted
-      setQuotations(prev => prev.map(q => q.id === quote.id ? { ...q, status: 'Accepted' } : q));
       setShowPoModal(false);
       // Reset
       setPoNumVal('');
@@ -520,12 +553,12 @@ export default function EngineeringWorkspace({ customers, projects, onNavigate }
         body: JSON.stringify({
           title: ecrTitle,
           description: ecrDesc,
-          reason: ecrReason,
+          reasonForChange: ecrReason,
           priority: ecrPriority,
           customerId: ecrCust,
           projectId: ecrProj || undefined,
-          affectedDrawings: ecrDwgNum ? [ecrDwgNum] : [],
-          requestedBy: 'Sarah Jenkins'
+          drawingNumber: ecrDwgNum || undefined,
+          status: 'Submitted'
         })
       });
 
@@ -536,6 +569,7 @@ export default function EngineeringWorkspace({ customers, projects, onNavigate }
       setEcrTitle('');
       setEcrDesc('');
       setEcrReason('');
+      setEcrPriority('Medium');
       setEcrCust('');
       setEcrProj('');
       setEcrDwgNum('');
@@ -546,301 +580,607 @@ export default function EngineeringWorkspace({ customers, projects, onNavigate }
     }
   };
 
-  const handleApproveDrawing = async (dwgId: string, status: 'Approved' | 'Released' | 'Rejected') => {
+  const handleApproveDrawing = async (dwgId: string, finalStatus: 'Released' | 'Rejected') => {
     try {
-      setSubmitting(true);
       const res = await fetch(`/api/engineering/drawings/${dwgId}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status,
-          approvedBy: 'Lead Engineer',
-          approvalNotes
-        })
+        body: JSON.stringify({ status: finalStatus, notes: approvalNotes })
       });
 
-      const data = await res.json();
-      setDrawings(prev => prev.map(d => d.id === dwgId ? data : d));
+      if (res.ok) {
+        setDrawings(prev => prev.map(d => d.id === dwgId ? { ...d, status: finalStatus } : d));
+        // Add a mock revision log if approved
+        if (finalStatus === 'Released') {
+          const releasedDwg = drawings.find(d => d.id === dwgId);
+          if (releasedDwg) {
+            const newRev: DrawingRevision = {
+              id: `rev_${Date.now()}`,
+              drawingId: dwgId,
+              revision: releasedDwg.revision,
+              description: approvalNotes || 'Initial engineering release and sign off.',
+              date: new Date().toISOString(),
+              engineer: 'Lead Operations Co-Pilot'
+            };
+            setRevisions(prev => [newRev, ...prev]);
+          }
+        }
+      }
       setShowApprovalModal(false);
       setApprovalNotes('');
-      setSelectedDwgId(null);
     } catch (err) {
       console.error(err);
-    } finally {
-      setSubmitting(false);
     }
   };
 
-  const handleInvoiceIssue = async (poId: string) => {
-    const po = pos.find(p => p.id === poId);
-    if (!po) return;
+  // BOM Functions
+  const handleAddBomItem = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bomPartNo.trim() || !bomDesc.trim()) return;
 
-    try {
-      setSubmitting(true);
-      const res = await fetch('/api/engineering/invoices', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          poId,
-          customerId: po.customerId,
-          projectId: po.projectId,
-          amount: po.amount,
-          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-        })
+    const newItem: BomItem = {
+      id: `b_${Date.now()}`,
+      partNumber: bomPartNo,
+      description: bomDesc,
+      material: bomMat,
+      quantity: bomQty,
+      supplier: 'Registered In-house Stock',
+      unitCost: bomCost,
+      weightGrams: bomWeight,
+      revision: 'A',
+      leadTimeDays: 5
+    };
+
+    setBomList([...bomList, newItem]);
+    setShowAddBomModal(false);
+    setBomPartNo('');
+    setBomDesc('');
+  };
+
+  const handleDeleteBomItem = (id: string) => {
+    setBomList(bomList.filter(item => item.id !== id));
+  };
+
+  // Aggregate calculations for BOM
+  const totalBomCost = bomList.reduce((acc, item) => acc + (item.unitCost * item.quantity), 0);
+  const totalBomWeight = bomList.reduce((acc, item) => acc + (item.weightGrams * item.quantity), 0);
+  const maxBomLeadTime = Math.max(...bomList.map(item => item.leadTimeDays));
+
+  // AI Assistant trigger
+  const runAiRfqAnalysis = (rfq: Rfq) => {
+    setAnalyzingRfq(true);
+    setSelectedRfqAi(rfq.id);
+    
+    // Simulating deep structural analysis of material cost and milling duration with visual results
+    setTimeout(() => {
+      const estimatedWeightGrams = 1200;
+      const materialCostKg = rfq.title.toLowerCase().includes('titanium') ? 4200 : 850;
+      const materialCost = Math.round((estimatedWeightGrams / 1000) * materialCostKg);
+      const machiningHours = 4.5;
+      const machiningCost = Math.round(machiningHours * 2500); // 2500 INR / hour milling rate
+      const baseProfitMargin = 0.25;
+      const suggestedQuote = Math.round((materialCost + machiningCost) * (1 + baseProfitMargin));
+
+      setAiAnalysisResult({
+        partWeightGrams: estimatedWeightGrams,
+        machiningHours,
+        materialCost,
+        machiningCost,
+        suggestedQuote,
+        materialsRisk: rfq.title.toLowerCase().includes('titanium') ? 'High Tool Wear Risk (Ti Grade 5 requires carbide inserts and heavy flood coolant)' : 'Low/Medium Risk (Al6061)',
+        machiningRisk: 'Tight tolerance on slot width requires finishing pass with specialized groove mills.'
       });
-
-      const data = await res.json();
-      setInvoices(prev => [data, ...prev]);
-      // Update PO status to Invoiced locally
-      setPos(prev => prev.map(p => p.id === poId ? { ...p, status: 'Invoiced' } : p));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSubmitting(false);
-    }
+      setAnalyzingRfq(false);
+    }, 1200);
   };
 
-  // Helper matching functions
-  const getCustomerName = (id: string) => {
-    const cust = customers.find(c => c.id === id);
-    return cust ? cust.company : 'Unknown Customer';
+  // Helper resolvers
+  const getCustomerName = (id?: string) => {
+    const c = customers.find(cust => cust.id === id);
+    return c ? c.company : 'Internal';
   };
 
   const getProjectName = (id?: string) => {
-    if (!id) return 'General/R&D';
-    const proj = projects.find(p => p.id === id);
-    return proj ? proj.name : 'Unknown Project';
+    const p = projects.find(proj => proj.id === id);
+    return p ? p.name : 'Standalone';
   };
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
-        <Cpu className="h-8 w-8 text-blue-600 animate-spin" />
-        <p className="text-xs text-slate-500 font-mono">Loading operations workspace...</p>
-      </div>
-    );
-  }
+  // Node toggle
+  const toggleNode = (nodeId: string) => {
+    setExpandedNodes(prev => ({
+      ...prev,
+      [nodeId]: !prev[nodeId]
+    }));
+  };
+
+  // Filter application
+  const filteredRfqs = rfqs.filter(r => {
+    const matchCust = customerFilter === 'All' || r.customerId === customerFilter;
+    return matchCust;
+  });
+
+  const filteredDrawings = drawings.filter(d => {
+    const matchCust = customerFilter === 'All' || d.customerId === customerFilter;
+    const matchStatus = statusFilter === 'All' || d.status === statusFilter;
+    return matchCust && matchStatus;
+  });
 
   return (
-    <div id="engineering_workspace" className="h-full flex flex-col space-y-6 overflow-y-auto pr-2 pb-10">
+    <div className="space-y-6">
       
-      {/* Dynamic Sub Navigation Tab rail */}
-      <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-        <div className="flex items-center gap-1 overflow-x-auto">
+      {/* Subtab Navigation Bar */}
+      <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm flex flex-wrap gap-2 items-center justify-between">
+        <div className="flex flex-wrap gap-1">
           {[
-            { id: 'rfq', label: 'RFQs', icon: Cpu },
-            { id: 'drawing', label: 'Drawings', icon: FileCode },
-            { id: 'approval', label: 'Approvals', icon: FileCheck },
-            { id: 'quote', label: 'Quotes', icon: DollarSign },
-            { id: 'po', label: 'POs', icon: Layers },
-            { id: 'invoice', label: 'Invoices', icon: DollarSign },
-            { id: 'ecr', label: 'ECRs', icon: ShieldAlert },
-            { id: 'cad', label: 'CAD File Center', icon: Box }
-          ].map(tab => {
-            const Icon = tab.icon;
-            const active = activeSubTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                id={`tab_${tab.id}`}
-                onClick={() => setActiveSubTab(tab.id as SubTab)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${active ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                <span>{tab.label}</span>
-                {tab.id === 'approval' && drawings.filter(d => d.status === 'In Review').length > 0 && (
-                  <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                )}
-              </button>
-            );
-          })}
+            { id: 'rfq', label: 'RFQs Ingress' },
+            { id: 'drawing', label: 'Drawing Vault' },
+            { id: 'approval', label: 'Approvals' },
+            { id: 'cad', label: 'CAD 3D View' },
+            { id: 'tree', label: 'Project Tree & Creo PVZ' },
+            { id: 'bom', label: 'BOM Manager' },
+            { id: 'production', label: 'CNC Tracker' },
+            { id: 'ecr', label: 'ECRs / ECOs' },
+            { id: 'quote', label: 'Quotations' },
+            { id: 'po', label: 'Purchase Orders' },
+            { id: 'invoice', label: 'Invoices' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveSubTab(tab.id as any)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0 ${activeSubTab === tab.id ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-500 hover:bg-slate-50'}`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        {/* Global Action items */}
-        <div className="flex items-center gap-2">
-          {activeSubTab === 'rfq' && (
-            <button
-              onClick={() => setShowRfqModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>New RFQ</span>
-            </button>
-          )}
-          {activeSubTab === 'drawing' && (
-            <button
-              onClick={() => setShowDwgModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>Log Drawing</span>
-            </button>
-          )}
-          {activeSubTab === 'quote' && (
-            <button
-              onClick={() => setShowQuoteModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>Create Quote</span>
-            </button>
-          )}
-          {activeSubTab === 'po' && (
-            <button
-              onClick={() => setShowPoModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>Receive PO</span>
-            </button>
-          )}
-          {activeSubTab === 'ecr' && (
-            <button
-              onClick={() => setShowEcrModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg shadow-sm"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>New Change Request</span>
-            </button>
-          )}
+        {/* Global Action buttons in sub-nav context */}
+        <div className="flex items-center gap-1.5">
+          <select
+            value={customerFilter}
+            onChange={e => setCustomerFilter(e.target.value)}
+            className="text-xs bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-xl text-slate-600 font-bold focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="All">All Clients</option>
+            {customers.map(c => (
+              <option key={c.id} value={c.id}>{c.company}</option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {/* ==================== RFQ MODULE ==================== */}
-      {activeSubTab === 'rfq' && (
-        <div id="module_rfq" className="space-y-4">
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
-            <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Active RFQ Matrix</span>
-              <span className="text-xs font-bold text-slate-500 font-mono">{rfqs.length} Total RFQs</span>
-            </div>
-            
-            <div className="divide-y divide-slate-100">
-              {rfqs.length === 0 ? (
-                <div className="p-8 text-center text-xs text-slate-400">No active RFQs registered. Click 'New RFQ' to log one.</div>
-              ) : (
-                rfqs.map(rfq => (
-                  <div key={rfq.id} className="p-4 hover:bg-slate-50 transition flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-50 text-blue-700 border border-blue-100">{rfq.rfqNumber}</span>
-                        <h4 className="text-xs font-bold text-slate-800">{rfq.title}</h4>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
-                        <span className="font-semibold text-slate-700">{getCustomerName(rfq.customerId)}</span>
-                        <span>•</span>
-                        <span>{getProjectName(rfq.projectId)}</span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> Due: {rfq.targetDeliveryDate}</span>
-                      </div>
-                      {rfq.notes && <p className="text-[11px] text-slate-400 max-w-xl italic">{rfq.notes}</p>}
-                    </div>
+      {/* RENDER VIEW PORTS */}
 
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="text-xs font-bold text-slate-800">${rfq.estimatedValue.toLocaleString()}</p>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Estimated Value</span>
+      {/* ==================== RFQ INGRESS MODULE ==================== */}
+      {activeSubTab === 'rfq' && (
+        <div id="module_rfq" className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-8 space-y-4">
+            <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+              <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Active Client RFQs</span>
+                <button
+                  onClick={() => setShowRfqModal(true)}
+                  className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition"
+                >
+                  <Plus className="h-3 w-3" /> Log RFQ
+                </button>
+              </div>
+
+              <div className="divide-y divide-slate-100">
+                {filteredRfqs.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-400">No incoming client RFQs registered.</div>
+                ) : (
+                  filteredRfqs.map(rfq => (
+                    <div 
+                      key={rfq.id} 
+                      onClick={() => runAiRfqAnalysis(rfq)}
+                      className="p-4 hover:bg-slate-50/50 transition cursor-pointer flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-50 text-blue-700 border border-blue-100">{rfq.id}</span>
+                          <h4 className="text-xs font-bold text-slate-800">{rfq.title}</h4>
+                        </div>
+                        <p className="text-[11px] text-slate-500">Client: <span className="font-semibold text-slate-700">{getCustomerName(rfq.customerId)}</span> • Target Delivery: {rfq.targetDeliveryDate}</p>
+                        {rfq.drawingRef && <p className="text-[10px] text-slate-400 font-medium">CAD Ref: <span className="font-mono">{rfq.drawingRef}</span></p>}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
-                          rfq.status === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                          rfq.status === 'Quoted' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                          rfq.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                          'bg-red-50 text-red-700 border-red-100'
-                        }`}>
-                          {rfq.status}
-                        </span>
-                        {rfq.status === 'Pending' && (
-                          <button
-                            onClick={() => {
-                              setQuoteRfqId(rfq.id);
-                              setQuoteAmount(rfq.estimatedValue.toString());
-                              setQuoteValid(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-                              setShowQuoteModal(true);
-                            }}
-                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                            title="Generate Quotation"
-                          >
-                            <Send className="h-4 w-4" />
-                          </button>
-                        )}
+
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-xs font-bold font-mono text-slate-700">₹{Number(rfq.estimatedValue || 0).toLocaleString()}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase border ${rfq.status === 'Quoted' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>{rfq.status}</span>
+                        <ChevronRight className="h-4 w-4 text-slate-400" />
                       </div>
+                    </div>
+                  )
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* AI ENGINEERING ASSISTANT SIDEBAR */}
+          <div className="lg:col-span-4 space-y-4">
+            <div className="bg-gradient-to-br from-slate-950 to-indigo-950 text-white p-5 rounded-2xl shadow-md space-y-4 border border-indigo-500/20">
+              <h3 className="text-xs font-extrabold text-indigo-300 uppercase tracking-widest flex items-center gap-1.5">
+                <Sparkles className="h-4 w-4 text-indigo-400" /> AI Engineering Cost Estimator
+              </h3>
+
+              {analyzingRfq ? (
+                <div className="py-12 text-center text-xs text-indigo-200/80 animate-pulse space-y-2">
+                  <RefreshCw className="h-6 w-6 text-indigo-400 mx-auto animate-spin" />
+                  <p>Analyzing structural model & CAD specifications...</p>
+                </div>
+              ) : selectedRfqAi && aiAnalysisResult ? (
+                <div className="space-y-4 text-xs leading-relaxed">
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider block">RFQ Context Selected</span>
+                    <span className="font-bold text-slate-200">{rfqs.find(r => r.id === selectedRfqAi)?.title}</span>
+                  </div>
+
+                  <div className="bg-slate-900/60 p-3.5 rounded-xl border border-indigo-500/10 space-y-2.5 font-mono">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Part Weight:</span>
+                      <span className="text-slate-200">{aiAnalysisResult.partWeightGrams} grams</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Machining Time:</span>
+                      <span className="text-slate-200">{aiAnalysisResult.machiningHours} hrs</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Raw Material:</span>
+                      <span className="text-slate-200">₹{aiAnalysisResult.materialCost.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Machining Fee:</span>
+                      <span className="text-slate-200">₹{aiAnalysisResult.machiningCost.toLocaleString()}</span>
+                    </div>
+                    <div className="border-t border-slate-800 pt-2 flex justify-between font-bold text-indigo-300">
+                      <span>Suggested Quote:</span>
+                      <span>₹{aiAnalysisResult.suggestedQuote.toLocaleString()}</span>
                     </div>
                   </div>
-                ))
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block">Tooling & Manufacturing Risks</span>
+                    <p className="text-indigo-200/80 text-[11px]">{aiAnalysisResult.materialsRisk}</p>
+                    <p className="text-indigo-200/80 text-[11px] mt-1">{aiAnalysisResult.machiningRisk}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-12 text-center text-xs text-indigo-200/60 italic">
+                  Select an active RFQ from the left queue to trigger structural and cost-optimization analysis.
+                </div>
               )}
             </div>
           </div>
         </div>
       )}
 
-      {/* ==================== DRAWING MODULE ==================== */}
-      {activeSubTab === 'drawing' && (
-        <div id="module_drawing" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-4">
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
-              <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Engineering Drawing Index</span>
-                <span className="text-xs font-bold text-slate-500 font-mono">{drawings.length} Drawings</span>
-              </div>
+      {/* ==================== PROJECT HIERARCHY TREE & CREO PVZ METADATA ==================== */}
+      {activeSubTab === 'tree' && (
+        <div id="module_project_tree" className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Nested hierarchy browser (6 cols) */}
+          <div className="lg:col-span-6 bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+            <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">Product Assembly Tree</h3>
+            
+            <div className="space-y-2 text-xs">
+              {/* Root Project node */}
+              <div className="border border-slate-100 rounded-xl p-3 bg-slate-50/50">
+                <div onClick={() => toggleNode('proj_1')} className="flex items-center justify-between cursor-pointer font-bold text-slate-800">
+                  <span className="flex items-center gap-1.5">📁 Project: Titanium Bracket Assembly (APX-001)</span>
+                  <span className="text-slate-400 text-[10px]">{expandedNodes['proj_1'] ? '▼' : '►'}</span>
+                </div>
 
-              <div className="divide-y divide-slate-100">
-                {drawings.map(dwg => (
-                  <div 
-                    key={dwg.id} 
-                    onClick={() => {
-                      setSelectedDwgId(dwg.id);
-                      if (dwg.fileType === 'STEP') {
-                        setSelectedCadFile('sensor');
-                      } else {
-                        setSelectedCadFile('bracket');
-                      }
-                    }}
-                    className={`p-4 hover:bg-slate-50 transition cursor-pointer flex justify-between items-center gap-4 ${selectedDwgId === dwg.id ? 'bg-blue-50/20 border-l-4 border-blue-500' : ''}`}
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-slate-100 text-slate-700">{dwg.drawingNumber}</span>
-                        <h4 className="text-xs font-bold text-slate-800">{dwg.title}</h4>
+                {expandedNodes['proj_1'] && (
+                  <div className="pl-4 mt-2.5 space-y-2.5 border-l border-slate-200">
+                    
+                    {/* Assembly subnode */}
+                    <div className="bg-white p-2 border border-slate-100 rounded-lg">
+                      <div onClick={() => toggleNode('assembly_main')} className="flex items-center justify-between cursor-pointer font-semibold text-slate-700">
+                        <span className="flex items-center gap-1">⚙️ Main Assembly: Collar Collar Assembly</span>
+                        <span className="text-slate-400 text-[10px]">{expandedNodes['assembly_main'] ? '▼' : '►'}</span>
                       </div>
-                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
-                        <span className="font-semibold text-slate-700">{getCustomerName(dwg.customerId)}</span>
-                        <span>•</span>
-                        <span>Rev {dwg.revision}</span>
-                        <span>•</span>
-                        <span className="px-1.5 py-0.2 text-[9px] bg-slate-100 rounded text-slate-500 uppercase">{dwg.fileType}</span>
-                      </div>
-                    </div>
 
-                    <div className="flex items-center gap-3">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                        dwg.status === 'Released' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                        dwg.status === 'In Review' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                        'bg-red-50 text-red-700 border-red-100'
-                      }`}>
-                        {dwg.status}
-                      </span>
-                      {dwg.status === 'In Review' && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedDwgId(dwg.id);
-                            setShowApprovalModal(true);
-                          }}
-                          className="px-2 py-1 bg-slate-900 text-white hover:bg-slate-800 rounded text-[10px] font-bold"
-                        >
-                          Approve/Reject
-                        </button>
+                      {expandedNodes['assembly_main'] && (
+                        <div className="pl-4 mt-2 space-y-1.5 border-l border-slate-100">
+                          <p className="text-slate-500 font-medium">🔧 Sub-Assembly: Multi-axis Pivots Pivot (PIN-APX-002)</p>
+                          <p className="text-slate-500 font-medium">📄 CAD Part Model: Support Collar Base (ASM-APX-001)</p>
+                          <p className="text-slate-400 text-[11px]">📝 Technical Drawing: dwg_apex_collar (Rev B Released)</p>
+                        </div>
                       )}
                     </div>
+
+                    <div className="bg-white p-2 border border-slate-100 rounded-lg text-slate-600 font-semibold">
+                      📦 Raw Material Stack: Titanium Alloy Stock Ti-6Al-4V
+                    </div>
+
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </div>
 
-          {/* Side Timeline or CAD quick view */}
-          <div className="space-y-4">
+          {/* Creo PVZ Simulated Metadata view (6 cols) */}
+          <div className="lg:col-span-6 bg-slate-900 text-slate-100 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+            <h3 className="text-xs font-extrabold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Box className="h-4 w-4" /> Creo PVZ Component Package Inspector
+            </h3>
+
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-[11px] space-y-3 leading-relaxed">
+              <div className="flex justify-between text-slate-400">
+                <span>File Format:</span>
+                <span className="text-emerald-400 font-bold">Creo View CAD (ZIP-compressed .pvz)</span>
+              </div>
+              <div className="flex justify-between text-slate-400">
+                <span>PVS Structures file:</span>
+                <span className="text-slate-200"> collar_assembly.pvs</span>
+              </div>
+              <div className="flex justify-between text-slate-400">
+                <span>OL files mapped:</span>
+                <span className="text-slate-200">2 core, 12 fastener parts</span>
+              </div>
+              <div className="flex justify-between text-slate-400">
+                <span>Exploded Coordinates:</span>
+                <span className="text-slate-200">COLLAR_COLLAR_EXPL_V1 (Configured)</span>
+              </div>
+              <div className="flex justify-between text-slate-400">
+                <span>Metadata revision:</span>
+                <span className="text-slate-200">Windchill PLM ID: WN-78112-COLLAR</span>
+              </div>
+            </div>
+
+            <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-800 text-xs text-slate-400 space-y-1.5">
+              <span className="font-bold uppercase tracking-widest text-[9px] text-slate-500 block">Snapshot thumbnail</span>
+              <div className="aspect-video bg-slate-950/80 rounded-lg flex items-center justify-center border border-slate-800/40 font-mono text-[10px] text-slate-500 italic">
+                [CAD Snapshot representation generated successfully]
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== BILL OF MATERIALS (BOM) MANAGER ==================== */}
+      {activeSubTab === 'bom' && (
+        <div id="module_bom" className="space-y-4">
+          <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-50">
+              <div>
+                <h3 className="text-sm font-black text-slate-800 tracking-tight">Bill of Materials (BOM) Grid Creator</h3>
+                <p className="text-xs text-slate-400">Structure parts, define raw materials, weight aggregates, and procurement lead times.</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    // Simple download mock trigger
+                    const csvContent = "data:text/csv;charset=utf-8,PartNumber,Description,Material,Quantity,UnitCost,WeightGrams\n" +
+                      bomList.map(b => `${b.partNumber},${b.description},${b.material},${b.quantity},${b.unitCost},${b.weightGrams}`).join("\n");
+                    const encodedUri = encodeURI(csvContent);
+                    const link = document.createElement("a");
+                    link.setAttribute("href", encodedUri);
+                    link.setAttribute("download", `BOM_AGGREGATE_COLLAR.csv`);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                  className="flex items-center gap-1 px-3 py-1.5 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600 transition"
+                >
+                  <Download className="h-3.5 w-3.5" /> Export CSV
+                </button>
+                <button
+                  onClick={() => setShowAddBomModal(true)}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-xs"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Add Part
+                </button>
+              </div>
+            </div>
+
+            {/* Editable grid table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="p-3">Part Number</th>
+                    <th className="p-3">Description</th>
+                    <th className="p-3">Material Grade</th>
+                    <th className="p-3 text-right">Qty</th>
+                    <th className="p-3 text-right">Unit Cost (₹)</th>
+                    <th className="p-3 text-right">Total Cost (₹)</th>
+                    <th className="p-3 text-right">Weight (g)</th>
+                    <th className="p-3 text-right">Lead Time (days)</th>
+                    <th className="p-3 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {bomList.map(item => (
+                    <tr key={item.id} className="hover:bg-slate-50/50">
+                      <td className="p-3 font-mono font-bold text-slate-800">{item.partNumber}</td>
+                      <td className="p-3 text-slate-600 font-semibold">{item.description}</td>
+                      <td className="p-3 text-slate-500">{item.material}</td>
+                      <td className="p-3 text-right font-bold">{item.quantity}</td>
+                      <td className="p-3 text-right font-mono">₹{item.unitCost.toLocaleString()}</td>
+                      <td className="p-3 text-right font-mono font-bold text-slate-800">₹{(item.unitCost * item.quantity).toLocaleString()}</td>
+                      <td className="p-3 text-right font-mono">{item.weightGrams}g</td>
+                      <td className="p-3 text-right font-mono font-bold text-amber-600">{item.leadTimeDays}d</td>
+                      <td className="p-3 text-center">
+                        <button
+                          onClick={() => handleDeleteBomItem(item.id)}
+                          className="text-slate-300 hover:text-red-500 transition"
+                          title="Delete part"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Aggregated totals calculations block */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-100 text-xs">
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px] block">Aggregated Cost Projection</span>
+                <span className="text-lg font-black text-slate-800">₹{totalBomCost.toLocaleString()}</span>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px] block">Aggregate Assembly Weight</span>
+                <span className="text-lg font-black text-slate-800">{(totalBomWeight / 1000).toFixed(2)} kg</span>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px] block">Max Structural Lead Time</span>
+                <span className="text-lg font-black text-amber-600">{maxBomLeadTime} days</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== CNC MANUFACTURING & PRODUCTION TRACKER ==================== */}
+      {activeSubTab === 'production' && (
+        <div id="module_production" className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Active Job tracker (8 cols) */}
+          <div className="lg:col-span-8 bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-50">
+              <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">Milling Operations Schedule</h3>
+              <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-100 font-bold uppercase px-2 py-0.5 rounded">3 Active Jobs</span>
+            </div>
+
+            <div className="divide-y divide-slate-100 text-xs space-y-4">
+              {productionOrders.map(order => (
+                <div key={order.id} className="pt-3 flex flex-wrap justify-between items-center gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="px-1.5 py-0.5 bg-slate-100 rounded font-mono font-bold text-[10px]">{order.partNo}</span>
+                      <h4 className="font-extrabold text-slate-800">{order.title}</h4>
+                    </div>
+                    <p className="text-slate-400 text-[11px]">
+                      CNC Station: <span className="font-semibold text-slate-600">{order.machine}</span> • Operator: {order.operator}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="text-right w-24">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">Milling progress</span>
+                      <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1">
+                        <div className="bg-blue-600 h-full rounded-full" style={{ width: `${order.progress}%` }}></div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-lg shrink-0">{order.status}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quality Measurement checklists / CAPA guidelines (4 cols) */}
+          <div className="lg:col-span-4 bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
+            <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">Quality Inspection Checklist</h3>
+            
+            <div className="space-y-3 text-xs">
+              {[
+                { label: 'Coordinate dimension check (CMM validation)', passed: true },
+                { label: 'Surface finish roughness (Ra 0.8 clearance)', passed: true },
+                { label: 'Fasteners screw thread pitch tolerance classes', passed: false },
+                { label: 'Structural weldment integrity check', passed: false }
+              ].map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-100 rounded-xl">
+                  <span className="font-medium text-slate-600">{item.label}</span>
+                  {item.passed ? (
+                    <span className="text-[9px] bg-emerald-50 text-emerald-700 font-bold px-1.5 py-0.5 rounded">Passed</span>
+                  ) : (
+                    <span className="text-[9px] bg-amber-50 text-amber-700 font-bold px-1.5 py-0.5 rounded">Pending Audit</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== DRAWING VAULT MODULE ==================== */}
+      {activeSubTab === 'drawing' && (
+        <div id="module_drawing" className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-8 space-y-4">
+            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+              <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Registered Technical Drawings</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (selectedDwgId) {
+                        setCompDwgId(selectedDwgId);
+                        setShowCompModal(true);
+                      } else {
+                        alert('Select a drawing first from the vault queue.');
+                      }
+                    }}
+                    className="flex items-center gap-1 px-3 py-1 border border-slate-300 hover:bg-slate-50 rounded text-xs font-bold text-slate-600 transition"
+                  >
+                    Compare Revisions
+                  </button>
+                  <button
+                    onClick={() => setShowDwgModal(true)}
+                    className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded"
+                  >
+                    <Plus className="h-3 w-3" /> Register Drawing
+                  </button>
+                </div>
+              </div>
+
+              <div className="divide-y divide-slate-100">
+                {filteredDrawings.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-400">No vault CAD templates found.</div>
+                ) : (
+                  filteredDrawings.map(dwg => (
+                    <div 
+                      key={dwg.id} 
+                      onClick={() => setSelectedDwgId(dwg.id)}
+                      className={`p-4 hover:bg-slate-50/50 transition cursor-pointer flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${selectedDwgId === dwg.id ? 'bg-blue-50/20 border-l-4 border-blue-500' : ''}`}
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-slate-100 text-slate-700">{dwg.drawingNumber}</span>
+                          <h4 className="text-xs font-bold text-slate-800">{dwg.title}</h4>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
+                          <span className="font-semibold text-slate-700">{getCustomerName(dwg.customerId)}</span>
+                          <span>•</span>
+                          <span>Rev {dwg.revision}</span>
+                          <span>•</span>
+                          <span className="px-1.5 py-0.2 text-[9px] bg-slate-100 rounded text-slate-500 uppercase">{dwg.fileType}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                          dwg.status === 'Released' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                          dwg.status === 'In Review' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                          'bg-red-50 text-red-700 border-red-100'
+                        }`}>
+                          {dwg.status}
+                        </span>
+                        {dwg.status === 'In Review' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedDwgId(dwg.id);
+                              setShowApprovalModal(true);
+                            }}
+                            className="px-2 py-1 bg-slate-900 text-white hover:bg-slate-800 rounded text-[10px] font-bold"
+                          >
+                            Approve/Reject
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Side Timeline revision history */}
+          <div className="lg:col-span-4 space-y-4">
             <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-4">
               <div className="flex justify-between items-center pb-2 border-b border-slate-100">
                 <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Revision History</span>
@@ -851,9 +1191,9 @@ export default function EngineeringWorkspace({ customers, projects, onNavigate }
                 {revisions
                   .filter(rev => !selectedDwgId || rev.drawingId === selectedDwgId)
                   .map(rev => (
-                    <div key={rev.id} className="flex gap-4 relative pl-6">
+                    <div key={rev.id} className="flex gap-4 relative pl-6 text-xs">
                       <div className="absolute left-1.5 top-1.5 w-3 h-3 rounded-full bg-blue-500 border-2 border-white ring-1 ring-slate-200"></div>
-                      <div className="space-y-0.5 text-xs">
+                      <div className="space-y-0.5">
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-slate-800">Rev {rev.revision}</span>
                           <span className="text-[10px] text-slate-400 font-mono">{new Date(rev.date).toLocaleDateString()}</span>
@@ -878,7 +1218,7 @@ export default function EngineeringWorkspace({ customers, projects, onNavigate }
               <span className="text-xs font-bold text-red-600 font-mono">{drawings.filter(d => d.status === 'In Review').length} In Review</span>
             </div>
 
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 text-xs">
               {drawings.filter(d => d.status === 'In Review').length === 0 ? (
                 <div className="p-8 text-center text-xs text-slate-400">All drawings have been audited and signed off.</div>
               ) : (
@@ -922,741 +1262,836 @@ export default function EngineeringWorkspace({ customers, projects, onNavigate }
         </div>
       )}
 
-      {/* ==================== QUOTATION MODULE ==================== */}
-      {activeSubTab === 'quote' && (
-        <div id="module_quote" className="space-y-4">
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
-            <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Issued Quotation Matrix</span>
-              <span className="text-xs font-bold text-slate-500 font-mono">{quotations.length} Active Quotes</span>
-            </div>
-
-            <div className="divide-y divide-slate-100">
-              {quotations.map(quote => (
-                <div key={quote.id} className="p-4 hover:bg-slate-50 transition flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-50 text-blue-700 border border-blue-100">{quote.quoteNumber}</span>
-                      <h4 className="text-xs font-bold text-slate-800">Quotation for RFQ {quote.rfqId}</h4>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
-                      <span className="font-semibold text-slate-700">{getCustomerName(quote.customerId)}</span>
-                      <span>•</span>
-                      <span>Valid until: {quote.validUntil}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs font-bold text-slate-800">${quote.amount.toLocaleString()}</span>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
-                        quote.status === 'Accepted' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                        quote.status === 'Sent' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                        'bg-gray-100 text-gray-700 border-gray-200'
-                      }`}>
-                        {quote.status}
-                      </span>
-                      {quote.status === 'Sent' && (
-                        <button
-                          onClick={() => {
-                            setPoQuoteId(quote.id);
-                            setPoNumVal(`PO-${Math.floor(100000 + Math.random() * 900000)}`);
-                            setPoAmount(quote.amount.toString());
-                            setPoDelivery(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-                            setShowPoModal(true);
-                          }}
-                          className="px-2 py-1 bg-slate-900 text-white hover:bg-slate-800 text-[10px] font-bold rounded"
-                        >
-                          Convert to PO
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ==================== PO MODULE ==================== */}
-      {activeSubTab === 'po' && (
-        <div id="module_po" className="space-y-4">
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
-            <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Purchase Order Tracker</span>
-              <span className="text-xs font-bold text-slate-500 font-mono">{pos.length} Active POs</span>
-            </div>
-
-            <div className="divide-y divide-slate-100">
-              {pos.map(po => (
-                <div key={po.id} className="p-4 hover:bg-slate-50 transition flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-900 text-white">{po.poNumber}</span>
-                      <h4 className="text-xs font-bold text-slate-800">PO for {getCustomerName(po.customerId)}</h4>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
-                      <span>Delivery Target: {po.deliveryDate}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs font-bold text-slate-800">${po.amount.toLocaleString()}</span>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
-                        po.status === 'Invoiced' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                        po.status === 'Shipped' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                        'bg-amber-50 text-amber-700 border-amber-100'
-                      }`}>
-                        {po.status}
-                      </span>
-                      {po.status === 'Received' && (
-                        <button
-                          onClick={() => handleInvoiceIssue(po.id)}
-                          className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded"
-                        >
-                          Generate Invoice
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ==================== INVOICE MODULE ==================== */}
-      {activeSubTab === 'invoice' && (
-        <div id="module_invoice" className="space-y-4">
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
-            <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Account Receivable Invoices</span>
-              <span className="text-xs font-bold text-slate-500 font-mono">{invoices.length} Invoices</span>
-            </div>
-
-            <div className="divide-y divide-slate-100">
-              {invoices.map(inv => (
-                <div key={inv.id} className="p-4 hover:bg-slate-50 transition flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-50 text-blue-700 border border-blue-100">{inv.invoiceNumber}</span>
-                      <h4 className="text-xs font-bold text-slate-800">Invoice for {getCustomerName(inv.customerId)}</h4>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
-                      <span>Due: {inv.dueDate}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs font-bold text-slate-800">${inv.amount.toLocaleString()}</span>
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
-                      inv.status === 'Paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                      inv.status === 'Sent' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                      'bg-red-50 text-red-700 border-red-100'
-                    }`}>
-                      {inv.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ==================== ECR CHANGE REQUEST MODULE ==================== */}
-      {activeSubTab === 'ecr' && (
-        <div id="module_ecr" className="space-y-4">
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
-            <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Engineering Change Requests (ECR)</span>
-              <span className="text-xs font-bold text-red-600 font-mono">{ecrs.length} Active ECRs</span>
-            </div>
-
-            <div className="divide-y divide-slate-100">
-              {ecrs.map(ecr => (
-                <div key={ecr.id} className="p-4 hover:bg-slate-50 transition flex flex-col gap-2">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-red-50 text-red-700 border border-red-100">{ecr.ecrNumber}</span>
-                      <h4 className="text-xs font-bold text-slate-800">{ecr.title}</h4>
-                    </div>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                      ecr.priority === 'Critical' ? 'bg-red-500 text-white' :
-                      ecr.priority === 'High' ? 'bg-red-100 text-red-700' :
-                      'bg-amber-100 text-amber-700'
-                    }`}>
-                      {ecr.priority}
-                    </span>
-                  </div>
-
-                  <p className="text-xs text-slate-600 leading-relaxed">{ecr.description}</p>
-                  <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 space-y-1">
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold uppercase">
-                      <span>Reason for Change</span>
-                      <span>Affected Drawings</span>
-                    </div>
-                    <div className="flex items-start justify-between text-xs text-slate-700">
-                      <p className="italic text-slate-500 max-w-md">"{ecr.reason}"</p>
-                      <p className="font-mono text-blue-600">{ecr.affectedDrawings.join(', ')}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1 border-t border-slate-100/50 text-[10px] text-slate-400 font-semibold uppercase">
-                    <span>Requested By: {ecr.requestedBy}</span>
-                    <span className="flex items-center gap-1.5 text-blue-600">
-                      <Clock className="h-3 w-3 animate-pulse" /> {ecr.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ==================== INTERACTIVE CAD MODULE ==================== */}
+      {/* ==================== CAD 3D VIEW MODULE ==================== */}
       {activeSubTab === 'cad' && (
-        <div id="module_cad" className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          
-          {/* Controls and metadata */}
-          <div className="lg:col-span-1 space-y-4">
-            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-4">
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block border-b border-slate-100 pb-2">CAD Model Selector</span>
-              
-              <div className="space-y-2">
-                {[
-                  { id: 'bracket', name: 'Turbine Bracket (APX)', scale: '1:1', material: 'Grade 5 Titanium' },
-                  { id: 'sensor', name: 'Sensor Casing (GLB)', scale: '1.5:1', material: 'AISI 316 Stainless' },
-                  { id: 'drone', name: 'Rotorguard Shell (ROB)', scale: '1:2', material: 'Nylon SLS / Carbon' }
-                ].map(model => (
+        <div id="module_cad" className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-8 bg-slate-950 rounded-2xl border border-slate-800 p-4 flex flex-col relative">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-900 mb-3 z-10 text-white">
+              <div className="flex items-center gap-2">
+                <Box className="h-5 w-5 text-blue-400 shrink-0" />
+                <span className="text-xs font-bold uppercase tracking-widest text-slate-300">Co-Pilot Interactive 3D CAD Viewer</span>
+              </div>
+              <div className="flex gap-1">
+                {['blueprint', 'solid', 'wireframe'].map(m => (
                   <button
-                    key={model.id}
-                    onClick={() => setSelectedCadFile(model.id)}
-                    className={`w-full text-left p-3 rounded-lg border transition text-xs flex flex-col space-y-1 ${
-                      selectedCadFile === model.id ? 'border-slate-800 bg-slate-900 text-white shadow-md' : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                    }`}
+                    key={m}
+                    onClick={() => setCadRenderMode(m as any)}
+                    className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase border transition ${cadRenderMode === m ? 'bg-blue-600 border-blue-600 text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'}`}
                   >
-                    <span className="font-bold">{model.name}</span>
-                    <span className={`text-[10px] font-semibold uppercase ${selectedCadFile === model.id ? 'text-slate-400' : 'text-slate-500'}`}>{model.material}</span>
+                    {m}
                   </button>
                 ))}
               </div>
-
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block border-b border-slate-100 pt-2 pb-2">Visual settings</span>
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Render mode</span>
-                  <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-lg">
-                    {['wireframe', 'solid', 'blueprint'].map(mode => (
-                      <button
-                        key={mode}
-                        onClick={() => setCadRenderMode(mode as any)}
-                        className={`py-1 rounded text-[10px] font-bold uppercase transition ${
-                          cadRenderMode === mode ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
-                        }`}
-                      >
-                        {mode.substring(0, 4)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <div className="flex justify-between items-center text-[10px] font-bold uppercase">
-                    <span className="text-slate-400">Exploded View</span>
-                    <span className="text-blue-600 font-mono">{cadExplode}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={cadExplode}
-                    onChange={(e) => setCadExplode(Number(e.target.value))}
-                    className="w-full accent-blue-600"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between pt-1 border-t border-slate-100">
-                  <span className="text-[10px] text-slate-500 font-bold uppercase">Auto-Rotation</span>
-                  <button
-                    onClick={() => setCadAutoRotate(!cadAutoRotate)}
-                    className={`px-3 py-1 rounded text-[10px] font-bold uppercase transition ${
-                      cadAutoRotate ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
-                    }`}
-                  >
-                    {cadAutoRotate ? 'On' : 'Off'}
-                  </button>
-                </div>
-              </div>
             </div>
-          </div>
 
-          {/* Interactive Viewport Canvas */}
-          <div className="lg:col-span-3 space-y-4">
-            <div className="bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden relative shadow-2xl flex flex-col items-center justify-center p-4 min-h-[450px]">
-              <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-                <Box className="h-4 w-4 text-sky-400 animate-spin" />
-                <span className="text-[10px] font-mono text-sky-400 font-semibold uppercase tracking-wider">WORKSPACE CAD ORTHOGRAPHIC REPLICA</span>
-              </div>
-
-              <div className="absolute top-4 right-4 z-10 flex gap-1 bg-slate-900/80 backdrop-blur p-1 rounded-lg border border-slate-800">
-                <button 
-                  onClick={() => {
-                    rotationRef.current = { x: 45, y: 45 };
-                    setCadExplode(0);
-                  }}
-                  className="p-1 text-slate-400 hover:text-white rounded"
-                  title="Reset View"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                </button>
-                <button 
-                  onClick={() => setCadAutoRotate(!cadAutoRotate)}
-                  className={`p-1 rounded ${cadAutoRotate ? 'text-emerald-400' : 'text-slate-400'}`}
-                  title="Toggle Auto Rotation"
-                >
-                  <RotateCw className="h-4 w-4" />
-                </button>
-              </div>
-
-              {/* Cursor dragging indicator instructions */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-slate-900/60 backdrop-blur px-3 py-1 rounded-full border border-slate-800 text-[10px] text-slate-400 font-semibold tracking-wider flex items-center gap-1.5">
-                <span>Drag Mouse to Rotate CAD Model</span>
-              </div>
-
+            {/* Simulated 3D projection canvas viewport */}
+            <div className="flex-1 min-h-[350px] bg-slate-950/80 rounded-xl relative overflow-hidden flex items-center justify-center border border-slate-900">
               <canvas
                 ref={canvasRef}
-                width={600}
+                width={500}
                 height={350}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUpOrLeave}
                 onMouseLeave={handleMouseUpOrLeave}
-                className="w-full h-[350px] max-w-[600px] cursor-grab active:cursor-grabbing"
+                className="cursor-grab active:cursor-grabbing w-full max-w-[500px]"
               />
+            </div>
+          </div>
+
+          {/* Model Controller variables panel */}
+          <div className="lg:col-span-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4 text-xs">
+            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Geometric Configurations</h3>
+
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-600">Active Drawing Model</label>
+              <select
+                value={selectedCadFile}
+                onChange={e => setSelectedCadFile(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 rounded-xl font-bold"
+              >
+                <option value="bracket">Multi-axis Turbine Bracket Assembly</option>
+                <option value="sensor">Avionics Sensor enclosure</option>
+                <option value="shell">Aerodynamic Shell structures</option>
+              </select>
+            </div>
+
+            <div className="space-y-1 pt-1">
+              <div className="flex justify-between items-center text-[11px] font-semibold text-slate-500">
+                <span>Assembly Explode Offsets</span>
+                <span>{cadExplode}mm</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="80"
+                value={cadExplode}
+                onChange={e => setCadExplode(Number(e.target.value))}
+                className="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-600">
+              <span>Automatic Rotation Loop</span>
+              <button
+                onClick={() => setCadAutoRotate(!cadAutoRotate)}
+                className={`px-3 py-1 border text-[10px] rounded font-bold transition ${cadAutoRotate ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white text-slate-600'}`}
+              >
+                {cadAutoRotate ? 'Active' : 'Paused'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ==================== CREATE RFQ MODAL ==================== */}
+      {/* ==================== QUOTATIONS MODULE ==================== */}
+      {activeSubTab === 'quote' && (
+        <div id="module_quotation" className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs text-xs">
+          <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Active Quotations</span>
+            <button
+              onClick={() => {
+                if (rfqs.length > 0) {
+                  setQuoteRfqId(rfqs[0].id);
+                  setShowQuoteModal(true);
+                } else {
+                  alert('Create an incoming RFQ first to issue quotations.');
+                }
+              }}
+              className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded"
+            >
+              <Plus className="h-3 w-3" /> Issue Quotation
+            </button>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {quotations.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-400">No quotations logged yet.</div>
+            ) : (
+              quotations.map(q => (
+                <div key={q.id} className="p-4 hover:bg-slate-50 transition flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-50 text-purple-700 border border-purple-100">{q.id}</span>
+                      <span className="text-[10px] text-slate-400 font-mono font-bold">RFQ Source: {q.rfqId}</span>
+                    </div>
+                    <p className="text-slate-500 font-semibold">Client: {getCustomerName(q.customerId)} • Valid Until: {q.validUntil}</p>
+                    {q.terms && <p className="text-slate-400 text-[10px] leading-relaxed">Payment Terms: {q.terms}</p>}
+                  </div>
+
+                  <span className="text-xs font-black font-mono text-slate-800">₹{Number(q.amount).toLocaleString()}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ==================== PURCHASE ORDERS MODULE ==================== */}
+      {activeSubTab === 'po' && (
+        <div id="module_po" className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs text-xs">
+          <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Purchase Orders (POs)</span>
+            <button
+              onClick={() => {
+                if (quotations.length > 0) {
+                  setPoQuoteId(quotations[0].id);
+                  setPoAmount(quotations[0].amount);
+                  setShowPoModal(true);
+                } else {
+                  alert('Ensure a quotation has been finalized before creating a Purchase Order link.');
+                }
+              }}
+              className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded"
+            >
+              <Plus className="h-3 w-3" /> Log PO Link
+            </button>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {pos.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-400">No purchase orders registered.</div>
+            ) : (
+              pos.map(po => (
+                <div key={po.id} className="p-4 hover:bg-slate-50 transition flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">{po.purchaseOrderNumber}</span>
+                      <span className="text-[10px] text-slate-400 font-mono font-bold">Quote Reference: {po.quotationId}</span>
+                    </div>
+                    <p className="text-slate-500 font-semibold">Client: {getCustomerName(po.customerId)} • Shipping Target: {po.targetDeliveryDate}</p>
+                  </div>
+
+                  <span className="text-xs font-black font-mono text-slate-800">₹{Number(po.amount).toLocaleString()}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ==================== ECO / ECR MODULE ==================== */}
+      {activeSubTab === 'ecr' && (
+        <div id="module_ecr" className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs text-xs">
+          <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Engineering Change Requests (ECRs)</span>
+            <button
+              onClick={() => setShowEcrModal(true)}
+              className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded"
+            >
+              <Plus className="h-3 w-3" /> Raise ECR
+            </button>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {ecrs.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-400">No ECR logs registered.</div>
+            ) : (
+              ecrs.map(e => (
+                <div key={e.id} className="p-4 hover:bg-slate-50 transition flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-50 text-rose-700 border border-rose-100">{e.id}</span>
+                      <span className={`text-[9px] px-1.5 py-0.5 font-bold rounded border uppercase ${
+                        e.priority === 'Critical' ? 'text-red-700 bg-red-50 border-red-100' : 'text-slate-500 bg-slate-50 border-slate-100'
+                      }`}>{e.priority} ECR</span>
+                    </div>
+                    <h4 className="font-extrabold text-slate-800">{e.title}</h4>
+                    <p className="text-slate-500">{e.description}</p>
+                    <p className="text-slate-400 text-[10px] font-medium">Reason for change: {e.reasonForChange}</p>
+                  </div>
+
+                  <span className="text-[10px] bg-slate-100 font-bold px-2 py-0.5 rounded">{e.status}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ==================== INVOICES MODULE ==================== */}
+      {activeSubTab === 'invoice' && (
+        <div id="module_invoice" className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs text-xs">
+          <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Outstanding Invoices</span>
+            <span className="text-xs text-slate-400 font-bold">Aggregate: ₹{invoices.reduce((a, b) => a + Number(b.amount), 0).toLocaleString()}</span>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {invoices.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-400">No invoices logged.</div>
+            ) : (
+              invoices.map(i => (
+                <div key={i.id} className="p-4 hover:bg-slate-50 transition flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 text-slate-700">{i.id}</span>
+                      <span className="text-[10px] text-slate-400 font-mono font-bold">PO: {i.purchaseOrderId}</span>
+                    </div>
+                    <p className="text-slate-500 font-semibold">Client: {getCustomerName(i.customerId)} • Generated: {i.issueDate}</p>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-black font-mono text-slate-800">₹{Number(i.amount).toLocaleString()}</span>
+                    <span className={`px-2.5 py-0.5 rounded-full border text-[9px] font-bold uppercase ${
+                      i.status === 'Paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'
+                    }`}>{i.status}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* CREATE MODAL WINDOWS */}
+
+      {/* RFQ MODAL */}
       {showRfqModal && (
-        <div id="modal_create_rfq" className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 border border-slate-100">
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider pb-2 border-b border-slate-100">Log New RFQ</h3>
-            
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-40 text-xs">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-start pb-2 border-b border-gray-100">
+              <h3 className="text-sm font-bold text-gray-900">Register incoming RFQ</h3>
+              <button onClick={() => setShowRfqModal(false)} className="text-gray-400 hover:text-gray-600 text-xs font-bold">Cancel</button>
+            </div>
+
             <form onSubmit={handleCreateRfq} className="space-y-4">
               <div className="space-y-1">
-                <label className="text-[10px] text-slate-500 font-bold uppercase">Customer Account</label>
-                <select
-                  value={rfqCustId}
-                  onChange={(e) => setRfqCustId(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg p-2 text-xs"
-                  required
-                >
-                  <option value="">Select Customer</option>
-                  {customers.map(c => (
-                    <option key={c.id} value={c.id}>{c.company}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-500 font-bold uppercase">RFQ Title</label>
+                <label className="font-semibold text-gray-700 uppercase tracking-wide block">RFQ Title</label>
                 <input
                   type="text"
+                  required
+                  placeholder="e.g., Titanium support collar machining"
                   value={rfqTitle}
-                  onChange={(e) => setRfqTitle(e.target.value)}
-                  placeholder="e.g. Turbine Mount Bracket Batch C"
-                  className="w-full border border-slate-200 rounded-lg p-2 text-xs"
-                  required
+                  onChange={e => setRfqTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] text-slate-500 font-bold uppercase">Estimated Value ($)</label>
-                  <input
-                    type="number"
-                    value={rfqValue}
-                    onChange={(e) => setRfqValue(e.target.value)}
-                    placeholder="45000"
-                    className="w-full border border-slate-200 rounded-lg p-2 text-xs"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] text-slate-500 font-bold uppercase">Target Delivery</label>
-                  <input
-                    type="date"
-                    value={rfqDelivery}
-                    onChange={(e) => setRfqDelivery(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-xs"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-500 font-bold uppercase">Drawing reference (Optional)</label>
-                <input
-                  type="text"
-                  value={rfqDwgRef}
-                  onChange={(e) => setRfqDwgRef(e.target.value)}
-                  placeholder="Apex-M4-v2.pdf"
-                  className="w-full border border-slate-200 rounded-lg p-2 text-xs"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-500 font-bold uppercase">Engineering Notes</label>
-                <textarea
-                  value={rfqNotes}
-                  onChange={(e) => setRfqNotes(e.target.value)}
-                  placeholder="Insert material requirements, tolerances, or signature references..."
-                  className="w-full border border-slate-200 rounded-lg p-2 text-xs h-20 resize-none"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowRfqModal(false)}
-                  className="px-4 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow"
-                >
-                  {submitting ? 'Submitting...' : 'Log RFQ'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ==================== CREATE DRAWING MODAL ==================== */}
-      {showDwgModal && (
-        <div id="modal_create_dwg" className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 border border-slate-100">
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider pb-2 border-b border-slate-100">Log Engineering Drawing</h3>
-            
-            <form onSubmit={handleCreateDrawing} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] text-slate-500 font-bold uppercase">Drawing Number</label>
-                  <input
-                    type="text"
-                    value={dwgNum}
-                    onChange={(e) => setDwgNum(e.target.value)}
-                    placeholder="DWG-APX-001"
-                    className="w-full border border-slate-200 rounded-lg p-2 text-xs"
-                    required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] text-slate-500 font-bold uppercase">Initial Revision</label>
-                  <input
-                    type="text"
-                    value={dwgRev}
-                    onChange={(e) => setDwgRev(e.target.value)}
-                    placeholder="A"
-                    className="w-full border border-slate-200 rounded-lg p-2 text-xs"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-500 font-bold uppercase">Drawing Title</label>
-                <input
-                  type="text"
-                  value={dwgTitle}
-                  onChange={(e) => setDwgTitle(e.target.value)}
-                  placeholder="e.g. Avionics Sensor Housing STEP Model"
-                  className="w-full border border-slate-200 rounded-lg p-2 text-xs"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-500 font-bold uppercase">Customer Account</label>
-                <select
-                  value={dwgCust}
-                  onChange={(e) => setDwgCust(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg p-2 text-xs"
-                  required
-                >
-                  <option value="">Select Customer</option>
-                  {customers.map(c => (
-                    <option key={c.id} value={c.id}>{c.company}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] text-slate-500 font-bold uppercase">CAD File Type</label>
+                  <label className="font-semibold text-gray-700 uppercase tracking-wide block">Customer link</label>
                   <select
-                    value={dwgType}
-                    onChange={(e) => setDwgType(e.target.value as any)}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-xs"
+                    value={rfqCustId}
+                    onChange={e => setRfqCustId(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
                   >
-                    <option value="STEP">STEP (.step)</option>
-                    <option value="IGES">IGES (.iges)</option>
-                    <option value="Creo">Creo (.prt)</option>
-                    <option value="SolidWorks">SolidWorks (.sldprt)</option>
-                    <option value="DXF">DXF (.dxf)</option>
-                    <option value="PDF">PDF (.pdf)</option>
+                    <option value="">-- Select Client --</option>
+                    {customers.map(c => (
+                      <option key={c.id} value={c.id}>{c.company}</option>
+                    ))}
                   </select>
                 </div>
+
                 <div className="space-y-1">
-                  <label className="text-[10px] text-slate-500 font-bold uppercase">Physical File Name</label>
+                  <label className="font-semibold text-gray-700 uppercase tracking-wide block">Project link</label>
+                  <select
+                    value={rfqProjId}
+                    onChange={e => setRfqProjId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
+                  >
+                    <option value="">None (Internal)</option>
+                    {projects.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-semibold text-gray-700 uppercase tracking-wide block">Estimated Value (₹)</label>
+                  <input
+                    type="number"
+                    placeholder="e.g., 45000"
+                    value={rfqValue}
+                    onChange={e => setRfqValue(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-semibold text-gray-700 uppercase tracking-wide block">Target Delivery</label>
+                  <input
+                    type="date"
+                    required
+                    value={rfqDelivery}
+                    onChange={e => setRfqDelivery(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-gray-700 uppercase tracking-wide block">Drawing Reference Code</label>
+                <input
+                  type="text"
+                  placeholder="e.g., CAD-APX-COLLAR"
+                  value={rfqDwgRef}
+                  onChange={e => setRfqDwgRef(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl font-mono"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold tracking-wide shadow-sm"
+              >
+                {submitting ? 'Registering...' : 'Log RFQ Ingress'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ADD BOM ITEM MODAL */}
+      {showAddBomModal && (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-45 text-xs">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-start pb-2 border-b border-gray-100">
+              <h3 className="text-sm font-bold text-gray-900">Add Part/Sub-item to BOM</h3>
+              <button onClick={() => setShowAddBomModal(false)} className="text-gray-400 hover:text-gray-600 text-xs font-bold">Cancel</button>
+            </div>
+
+            <form onSubmit={handleAddBomItem} className="space-y-4">
+              <div className="space-y-1">
+                <label className="font-semibold text-gray-700 uppercase block">Part Number</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., ASM-APX-012"
+                  value={bomPartNo}
+                  onChange={e => setBomPartNo(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl font-mono"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-gray-700 uppercase block">Part Description</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., Gasket flange spacer"
+                  value={bomDesc}
+                  onChange={e => setBomDesc(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-semibold text-gray-700 uppercase block">Material Grade</label>
                   <input
                     type="text"
-                    value={dwgFileName}
-                    onChange={(e) => setDwgFileName(e.target.value)}
-                    placeholder="enclosure_v1.step"
-                    className="w-full border border-slate-200 rounded-lg p-2 text-xs"
+                    value={bomMat}
+                    onChange={e => setBomMat(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-semibold text-gray-700 uppercase block">Quantity</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={bomQty}
+                    onChange={e => setBomQty(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
                   />
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowDwgModal(false)}
-                  className="px-4 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow"
-                >
-                  {submitting ? 'Submitting...' : 'Log Drawing'}
-                </button>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-semibold text-gray-700 uppercase block">Unit Cost (₹)</label>
+                  <input
+                    type="number"
+                    value={bomCost}
+                    onChange={e => setBomCost(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-semibold text-gray-700 uppercase block">Weight (g)</label>
+                  <input
+                    type="number"
+                    value={bomWeight}
+                    onChange={e => setBomWeight(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl font-mono"
+                  />
+                </div>
               </div>
+
+              <button
+                type="submit"
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm"
+              >
+                Add part to BOM
+              </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* ==================== CREATE QUOTATION MODAL ==================== */}
-      {showQuoteModal && (
-        <div id="modal_create_quote" className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 border border-slate-100">
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider pb-2 border-b border-slate-100">Issue Engineering Quotation</h3>
+      {/* DRAWING REGISTER MODAL */}
+      {showDwgModal && (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-40 text-xs">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-start pb-2 border-b border-gray-100">
+              <h3 className="text-sm font-bold text-gray-900">Register Drawing</h3>
+              <button onClick={() => setShowDwgModal(false)} className="text-gray-400 hover:text-gray-600 text-xs font-bold">Cancel</button>
+            </div>
+
+            <form onSubmit={handleCreateDrawing} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-semibold text-gray-700 uppercase block">Drawing Number</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g., AD-APX-301"
+                    value={dwgNum}
+                    onChange={e => setDwgNum(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-semibold text-gray-700 uppercase block">Rev</label>
+                  <input
+                    type="text"
+                    required
+                    value={dwgRev}
+                    onChange={e => setDwgRev(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl font-mono text-center"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-gray-700 uppercase block">Drawing Title</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., Titanium Base collar orthographic projection"
+                  value={dwgTitle}
+                  onChange={e => setDwgTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-semibold text-gray-700 uppercase block">Customer</label>
+                  <select
+                    value={dwgCust}
+                    onChange={e => setDwgCust(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
+                  >
+                    <option value="">-- Select Client --</option>
+                    {customers.map(c => (
+                      <option key={c.id} value={c.id}>{c.company}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-semibold text-gray-700 uppercase block">Project Link</label>
+                  <select
+                    value={dwgProj}
+                    onChange={e => setDwgProj(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
+                  >
+                    <option value="">None (Internal)</option>
+                    {projects.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-semibold text-gray-700 uppercase block">File Format</label>
+                  <select
+                    value={dwgType}
+                    onChange={e => setDwgType(e.target.value as any)}
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
+                  >
+                    <option value="STEP">STEP Model (.stp)</option>
+                    <option value="IGES">IGES Model (.igs)</option>
+                    <option value="Creo">Creo View (.pvz)</option>
+                    <option value="SolidWorks">SolidWorks Part (.sldprt)</option>
+                    <option value="DXF">DXF Vector (.dxf)</option>
+                    <option value="PDF">PDF Sheet Blueprint (.pdf)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-semibold text-gray-700 uppercase block">File Name Override</label>
+                  <input
+                    type="text"
+                    placeholder="Auto-generated if left empty"
+                    value={dwgFileName}
+                    onChange={e => setDwgFileName(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl font-mono"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold tracking-wide"
+              >
+                {submitting ? 'Registering...' : 'Register CAD Drawing Vault'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DRAWING APPROVAL NOTES MODAL */}
+      {showApprovalModal && (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-40 text-xs">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+            <h3 className="text-sm font-bold text-gray-900">Sign Off Blueprint Approval Notes</h3>
             
+            <div className="space-y-3">
+              <textarea
+                rows={3}
+                required
+                placeholder="Insert structural signing, measurements validation, ECR link markers..."
+                value={approvalNotes}
+                onChange={e => setApprovalNotes(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
+              />
+              <div className="flex justify-end gap-2 text-xs font-bold">
+                <button 
+                  onClick={() => setShowApprovalModal(false)}
+                  className="px-3.5 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-500 rounded"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => handleApproveDrawing(selectedDwgId!, 'Released')}
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded"
+                >
+                  Sign & Approve
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* REVISION SIDE-BY-SIDE COMPARISON MODAL */}
+      {showCompModal && (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-40 text-xs">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-start pb-2 border-b border-gray-100">
+              <h3 className="text-sm font-bold text-gray-900">Side-by-Side Drawing Revision Comparison</h3>
+              <button onClick={() => setShowCompModal(false)} className="text-gray-400 hover:text-gray-600 text-xs font-bold">Cancel</button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-xs font-mono">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2">
+                <span className="font-extrabold text-[10px] text-slate-400 uppercase tracking-widest block">Revision A (Baseline)</span>
+                <p className="font-bold text-slate-700">Volume: 145,200 mm³</p>
+                <p className="font-bold text-slate-700">Material: Ti-6Al-4V</p>
+                <p className="font-bold text-slate-700">Weight: 643 grams</p>
+                <p className="font-bold text-slate-700">Tolerance: ISO 2768-m</p>
+                <p className="text-[10px] text-slate-400 leading-normal font-sans">Initial prototype, drafted with standard clearance tolerances.</p>
+              </div>
+
+              <div className="bg-blue-50/20 p-4 rounded-xl border border-blue-100/50 space-y-2">
+                <span className="font-extrabold text-[10px] text-blue-600 uppercase tracking-widest block">Revision B (Active Vault)</span>
+                <p className="font-bold text-blue-800">Volume: 142,100 mm³ (-2%)</p>
+                <p className="font-bold text-blue-800">Material: Ti-6Al-4V Grade 5</p>
+                <p className="font-bold text-blue-800">Weight: 630 grams (-13g)</p>
+                <p className="font-bold text-blue-800">Tolerance: ISO 2768-f (Tightened)</p>
+                <p className="text-[10px] text-blue-500 leading-normal font-sans">Optimized collar throat thickness and thread fits to match aerospace spec.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CREATE QUOTATION MODAL */}
+      {showQuoteModal && (
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-40 text-xs">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-start pb-2 border-b border-gray-100">
+              <h3 className="text-sm font-bold text-gray-900">Issue Quotation</h3>
+              <button onClick={() => setShowQuoteModal(false)} className="text-gray-400 hover:text-gray-600 text-xs font-bold">Cancel</button>
+            </div>
+
             <form onSubmit={handleCreateQuotation} className="space-y-4">
               <div className="space-y-1">
-                <label className="text-[10px] text-slate-500 font-bold uppercase">Select Target RFQ</label>
+                <label className="font-semibold text-gray-700 uppercase block">Source RFQ</label>
                 <select
                   value={quoteRfqId}
-                  onChange={(e) => setQuoteRfqId(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg p-2 text-xs"
+                  onChange={e => setQuoteRfqId(e.target.value)}
                   required
+                  className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
                 >
-                  <option value="">Select RFQ</option>
-                  {rfqs.filter(r => r.status === 'Pending').map(r => (
-                    <option key={r.id} value={r.id}>{r.rfqNumber} - {r.title} ({getCustomerName(r.customerId)})</option>
+                  <option value="">-- Select Source RFQ --</option>
+                  {rfqs.map(r => (
+                    <option key={r.id} value={r.id}>[{r.id}] {r.title}</option>
                   ))}
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] text-slate-500 font-bold uppercase">Quotation Amount ($)</label>
+                  <label className="font-semibold text-gray-700 uppercase block">Quoted Amount (₹)</label>
                   <input
                     type="number"
+                    required
+                    placeholder="e.g., 52000"
                     value={quoteAmount}
-                    onChange={(e) => setQuoteAmount(e.target.value)}
-                    placeholder="45000"
-                    className="w-full border border-slate-200 rounded-lg p-2 text-xs"
-                    required
+                    onChange={e => setQuoteAmount(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl font-mono"
                   />
                 </div>
+
                 <div className="space-y-1">
-                  <label className="text-[10px] text-slate-500 font-bold uppercase">Quotation Validity</label>
+                  <label className="font-semibold text-gray-700 uppercase block">Valid Until</label>
                   <input
                     type="date"
-                    value={quoteValid}
-                    onChange={(e) => setQuoteValid(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-xs"
                     required
+                    value={quoteValid}
+                    onChange={e => setQuoteValid(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl font-mono"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] text-slate-500 font-bold uppercase">Contractual Terms</label>
-                <textarea
+                <label className="font-semibold text-gray-700 uppercase block">Payment & Shipping Terms</label>
+                <input
+                  type="text"
+                  placeholder="e.g., NET 30, Ex-Works"
                   value={quoteTerms}
-                  onChange={(e) => setQuoteTerms(e.target.value)}
-                  placeholder="e.g. Net 30. Delivery within 3 weeks after confirmation."
-                  className="w-full border border-slate-200 rounded-lg p-2 text-xs h-20 resize-none"
+                  onChange={e => setQuoteTerms(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
                 />
               </div>
 
-              <div className="flex gap-2 pt-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowQuoteModal(false)}
-                  className="px-4 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow"
-                >
-                  {submitting ? 'Submitting...' : 'Issue Quote'}
-                </button>
-              </div>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold tracking-wide shadow-sm"
+              >
+                {submitting ? 'Issuing...' : 'Issue Quotation'}
+              </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* ==================== RECEIVE PO MODAL ==================== */}
+      {/* CREATE PO MODAL */}
       {showPoModal && (
-        <div id="modal_create_po" className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 border border-slate-100">
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider pb-2 border-b border-slate-100">Receive Purchase Order (PO)</h3>
-            
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-40 text-xs">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-start pb-2 border-b border-gray-100">
+              <h3 className="text-sm font-bold text-gray-900">Log client Purchase Order (PO) link</h3>
+              <button onClick={() => setShowPoModal(false)} className="text-gray-400 hover:text-gray-600 text-xs font-bold">Cancel</button>
+            </div>
+
             <form onSubmit={handleCreatePo} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-500 font-bold uppercase">Purchase Order Number (PO #)</label>
-                <input
-                  type="text"
-                  value={poNumVal}
-                  onChange={(e) => setPoNumVal(e.target.value)}
-                  placeholder="PO-789012"
-                  className="w-full border border-slate-200 rounded-lg p-2 text-xs"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-500 font-bold uppercase">Associated Quotation</label>
-                <select
-                  value={poQuoteId}
-                  onChange={(e) => setPoQuoteId(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg p-2 text-xs"
-                  required
-                >
-                  <option value="">Select Quotation</option>
-                  {quotations.filter(q => q.status === 'Sent').map(q => (
-                    <option key={q.id} value={q.id}>{q.quoteNumber} - ${q.amount.toLocaleString()} ({getCustomerName(q.customerId)})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] text-slate-500 font-bold uppercase">PO Amount ($)</label>
+                  <label className="font-semibold text-gray-700 uppercase block">PO Reference Number</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g., PO-RELIANCE-9901"
+                    value={poNumVal}
+                    onChange={e => setPoNumVal(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-semibold text-gray-700 uppercase block">Quotation Reference</label>
+                  <select
+                    value={poQuoteId}
+                    onChange={e => setPoQuoteId(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl font-mono"
+                  >
+                    <option value="">-- Select Quote --</option>
+                    {quotations.map(qt => (
+                      <option key={qt.id} value={qt.id}>[{qt.id}] Amount: ₹{qt.amount.toLocaleString()}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-semibold text-gray-700 uppercase block">PO Amount (₹)</label>
                   <input
                     type="number"
+                    placeholder="Auto-inherits quote amount if blank"
                     value={poAmount}
-                    onChange={(e) => setPoAmount(e.target.value)}
-                    placeholder="8200"
-                    className="w-full border border-slate-200 rounded-lg p-2 text-xs"
+                    onChange={e => setPoAmount(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl font-mono"
                   />
                 </div>
+
                 <div className="space-y-1">
-                  <label className="text-[10px] text-slate-500 font-bold uppercase">Delivery Date Target</label>
+                  <label className="font-semibold text-gray-700 uppercase block">Delivery Target Date</label>
                   <input
                     type="date"
-                    value={poDelivery}
-                    onChange={(e) => setPoDelivery(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-xs"
                     required
+                    value={poDelivery}
+                    onChange={e => setPoDelivery(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl font-mono"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] text-slate-500 font-bold uppercase">Signed PO Attachment File Name</label>
+                <label className="font-semibold text-gray-700 uppercase block">Scanned File Name reference</label>
                 <input
                   type="text"
+                  placeholder="e.g., reliance_po_col_3012.pdf"
                   value={poFile}
-                  onChange={(e) => setPoFile(e.target.value)}
-                  placeholder="PO_789012_Signed.pdf"
-                  className="w-full border border-slate-200 rounded-lg p-2 text-xs"
+                  onChange={e => setPoFile(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl font-mono"
                 />
               </div>
 
-              <div className="flex gap-2 pt-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowPoModal(false)}
-                  className="px-4 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow"
-                >
-                  {submitting ? 'Submitting...' : 'Log PO'}
-                </button>
-              </div>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold tracking-wide shadow-sm"
+              >
+                {submitting ? 'Registering...' : 'Log Purchase Order link'}
+              </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* ==================== CREATE ECR CHANGE REQUEST MODAL ==================== */}
+      {/* CREATE ECR MODAL */}
       {showEcrModal && (
-        <div id="modal_create_ecr" className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 border border-slate-100">
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider pb-2 border-b border-slate-100">Request Engineering Change (ECR)</h3>
-            
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-40 text-xs">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-start pb-2 border-b border-gray-100">
+              <h3 className="text-sm font-bold text-gray-900">Raise ECR (Engineering Change Request)</h3>
+              <button onClick={() => setShowEcrModal(false)} className="text-gray-400 hover:text-gray-600 text-xs font-bold">Cancel</button>
+            </div>
+
             <form onSubmit={handleCreateEcr} className="space-y-4">
               <div className="space-y-1">
-                <label className="text-[10px] text-slate-500 font-bold uppercase">ECR Title</label>
+                <label className="font-semibold text-gray-700 uppercase block">ECR Title</label>
                 <input
                   type="text"
-                  value={ecrTitle}
-                  onChange={(e) => setEcrTitle(e.target.value)}
-                  placeholder="e.g. Shift Boss Spacing to 48mm"
-                  className="w-full border border-slate-200 rounded-lg p-2 text-xs"
                   required
+                  placeholder="e.g., Adjust base thickness clearance"
+                  value={ecrTitle}
+                  onChange={e => setEcrTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] text-slate-500 font-bold uppercase">Customer Account</label>
-                <select
-                  value={ecrCust}
-                  onChange={(e) => setEcrCust(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg p-2 text-xs"
-                  required
-                >
-                  <option value="">Select Customer</option>
-                  {customers.map(c => (
-                    <option key={c.id} value={c.id}>{c.company}</option>
-                  ))}
-                </select>
+                <label className="font-semibold text-gray-700 uppercase block">Detailed Description</label>
+                <textarea
+                  rows={2}
+                  placeholder="Describe the geometric adjustment and physical impacts..."
+                  value={ecrDesc}
+                  onChange={e => setEcrDesc(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
+                />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="font-semibold text-gray-700 uppercase block">Reason for Change</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., Tool wear on thread slots, structural stability"
+                  value={ecrReason}
+                  onChange={e => setEcrReason(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] text-slate-500 font-bold uppercase">ECR Priority</label>
+                  <label className="font-semibold text-gray-700 uppercase block">Priority</label>
                   <select
                     value={ecrPriority}
-                    onChange={(e) => setEcrPriority(e.target.value as any)}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-xs"
+                    onChange={e => setEcrPriority(e.target.value as any)}
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
                   >
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
@@ -1664,105 +2099,58 @@ export default function EngineeringWorkspace({ customers, projects, onNavigate }
                     <option value="Critical">Critical</option>
                   </select>
                 </div>
+
                 <div className="space-y-1">
-                  <label className="text-[10px] text-slate-500 font-bold uppercase">Affected Drawing Number</label>
+                  <label className="font-semibold text-gray-700 uppercase block">Target Drawing Number</label>
                   <input
                     type="text"
+                    placeholder="e.g., AD-APX-301"
                     value={ecrDwgNum}
-                    onChange={(e) => setEcrDwgNum(e.target.value)}
-                    placeholder="DWG-GLB-ENV"
-                    className="w-full border border-slate-200 rounded-lg p-2 text-xs"
+                    onChange={e => setEcrDwgNum(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl font-mono"
                   />
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-500 font-bold uppercase">Modification Description</label>
-                <textarea
-                  value={ecrDesc}
-                  onChange={(e) => setEcrDesc(e.target.value)}
-                  placeholder="Detail exactly what structural changes are required..."
-                  className="w-full border border-slate-200 rounded-lg p-2 text-xs h-16 resize-none"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-semibold text-gray-700 uppercase block">Customer</label>
+                  <select
+                    value={ecrCust}
+                    onChange={e => setEcrCust(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
+                  >
+                    <option value="">-- Select Client --</option>
+                    {customers.map(c => (
+                      <option key={c.id} value={c.id}>{c.company}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-semibold text-gray-700 uppercase block">Project Link</label>
+                  <select
+                    value={ecrProj}
+                    onChange={e => setEcrProj(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl"
+                  >
+                    <option value="">None (Internal)</option>
+                    {projects.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-500 font-bold uppercase">Reason for change</label>
-                <textarea
-                  value={ecrReason}
-                  onChange={(e) => setEcrReason(e.target.value)}
-                  placeholder="e.g. Prevent interference with newer PCB component layout."
-                  className="w-full border border-slate-200 rounded-lg p-2 text-xs h-16 resize-none"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowEcrModal(false)}
-                  className="px-4 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow"
-                >
-                  {submitting ? 'Submitting...' : 'Log Change Request'}
-                </button>
-              </div>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm"
+              >
+                {submitting ? 'Submitting...' : 'Raise ECR / ECO Request'}
+              </button>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* ==================== DRAWING APPROVAL FEEDBACK MODAL ==================== */}
-      {showApprovalModal && selectedDwgId && (
-        <div id="modal_drawing_audit" className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 border border-slate-100">
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider pb-2 border-b border-slate-100">Auditing Drawing Sign-Off</h3>
-            
-            <div className="space-y-3">
-              <p className="text-xs text-slate-600 leading-relaxed">
-                You are performing a compliance audit for <strong>{drawings.find(d => d.id === selectedDwgId)?.drawingNumber}</strong>. 
-                Auditing will update the operational state of the drawing to <strong>Released</strong> or <strong>Rejected</strong>.
-              </p>
-
-              <div className="space-y-1">
-                <label className="text-[10px] text-slate-500 font-bold uppercase">Auditor Audit Notes</label>
-                <textarea
-                  value={approvalNotes}
-                  onChange={(e) => setApprovalNotes(e.target.value)}
-                  placeholder="Insert mechanical validation notes, clearance metrics, or tolerancing checks..."
-                  className="w-full border border-slate-200 rounded-lg p-2 text-xs h-24 resize-none"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowApprovalModal(false)}
-                  className="px-4 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleApproveDrawing(selectedDwgId, 'Rejected')}
-                  disabled={submitting}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow"
-                >
-                  Reject & Flags
-                </button>
-                <button
-                  onClick={() => handleApproveDrawing(selectedDwgId, 'Released')}
-                  disabled={submitting}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow"
-                >
-                  Sign & Approve
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}

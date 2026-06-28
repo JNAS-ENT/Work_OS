@@ -7,7 +7,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Mail, CheckSquare, Briefcase, Users, Calendar, 
   FileText, Folder, Layers, Terminal, Sparkles, Settings, 
-  Bell, Search, RefreshCw, User, ShieldCheck, HeartPulse, ChevronRight, Check, Cpu
+  Bell, Search, RefreshCw, User, ShieldCheck, HeartPulse, ChevronRight, Check, Cpu,
+  Phone, MessageSquare, LogOut, Menu, ChevronLeft, Sun, Moon, HelpCircle, Activity, LayoutGrid
 } from 'lucide-react';
 
 // Import our modular components
@@ -24,12 +25,63 @@ import SystemLogs from './components/SystemLogs';
 import AiAssistant from './components/AiAssistant';
 import SettingsPanel from './components/SettingsPanel';
 import EngineeringWorkspace from './components/EngineeringWorkspace';
+import WhatsappCenter from './components/WhatsappCenter';
+import LoginScreen from './components/LoginScreen';
+import CommandPalette from './components/CommandPalette';
+import RightAiPanel from './components/RightAiPanel';
+import { useTheme } from './contexts/ThemeContext';
 
 import { Email, Task, Project, Customer, FileItem, Rfq, Drawing, Quotation, PurchaseOrder, Invoice, EmailThread } from './types';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [tabParam, setTabParam] = useState<any>(null);
+
+  // Theme support
+  const { theme, resolvedTheme, setTheme } = useTheme();
+
+  // Collapsible and overlay state parameters
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isAiPanelOpen, setIsAiPanelOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Real-time clock refresh
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Global Ctrl + K listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Authentication & Multi-user session persistence
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    const saved = localStorage.getItem('work_os_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+
+  const handleLogin = (user: any) => {
+    setCurrentUser(user);
+    localStorage.setItem('work_os_user', JSON.stringify(user));
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('work_os_user');
+  };
 
   // Core relational state
   const [emails, setEmails] = useState<Email[]>([]);
@@ -295,6 +347,7 @@ export default function App() {
 
   const sidebarItems = [
     { id: 'dashboard', label: 'Action Center', icon: LayoutDashboard },
+    { id: 'whatsapp', label: 'WhatsApp AI Center', icon: Phone },
     { id: 'email', label: 'Email Center', icon: Mail, badge: emails.filter(e => e.unread && !e.deleted).length },
     { id: 'tasks', label: 'Task Manager', icon: CheckSquare, badge: tasks.filter(t => t.status !== 'Completed').length },
     { id: 'projects', label: 'Projects', icon: Briefcase },
@@ -309,25 +362,42 @@ export default function App() {
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
+  // Intercept logged-out session state
+  if (!currentUser) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+
   return (
-    <div className="flex h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans overflow-hidden transition-colors duration-200">
       
       {/* Sidebar Navigation */}
-      <aside className="w-60 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 z-20">
+      <aside className={`bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 z-20 transition-all duration-300 ${isSidebarCollapsed ? 'w-16' : 'w-60'}`}>
         <div className="flex flex-col flex-1 overflow-y-auto">
           {/* Logo Branding */}
-          <div className="p-6 flex items-center gap-3 border-b border-slate-100">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shrink-0 shadow-sm">
-              <div className="w-4 h-4 bg-white rounded-xs"></div>
+          <div className="p-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shrink-0 shadow-sm">
+                <LayoutGrid className="w-4 h-4 text-white" />
+              </div>
+              {!isSidebarCollapsed && (
+                <div className="space-y-0.5 animate-fade-in truncate">
+                  <h1 className="text-xs font-bold tracking-tight text-slate-800 dark:text-slate-200 uppercase">Work OS V2</h1>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Geometric Suite</span>
+                </div>
+              )}
             </div>
-            <div className="space-y-0.5">
-              <h1 className="text-sm font-bold tracking-tight text-slate-800 uppercase">Work OS</h1>
-              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Geometric Core</span>
-            </div>
+
+            <button 
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg transition"
+            >
+              <ChevronLeft className={`h-4 w-4 transition-transform duration-300 ${isSidebarCollapsed ? 'rotate-180' : ''}`} />
+            </button>
           </div>
 
           {/* Navigation Links */}
-          <nav className="p-4 space-y-1">
+          <nav className="p-3 space-y-1">
             {sidebarItems.map(item => {
               const Icon = item.icon;
               const active = activeTab === item.id;
@@ -335,14 +405,19 @@ export default function App() {
                 <button
                   key={item.id}
                   onClick={() => handleDeepNavigate(item.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition duration-150 ${active ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
+                  title={isSidebarCollapsed ? item.label : undefined}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer ${
+                    active 
+                      ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-bold shadow-2xs border-l-4 border-blue-600' 
+                      : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/30 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={`h-4.5 w-4.5 ${active ? 'text-blue-700' : 'text-slate-400'}`} />
-                    <span>{item.label}</span>
+                    <Icon className={`h-4.5 w-4.5 ${active ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
+                    {!isSidebarCollapsed && <span className="animate-fade-in">{item.label}</span>}
                   </div>
-                  {item.badge && item.badge > 0 ? (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${active ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-600'}`}>
+                  {!isSidebarCollapsed && item.badge && item.badge > 0 ? (
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold shrink-0 ${active ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300' : 'bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400'}`}>
                       {item.badge}
                     </span>
                   ) : null}
@@ -353,69 +428,122 @@ export default function App() {
         </div>
 
         {/* User Account footer */}
-        <div className="p-4 mt-auto border-t border-slate-100 bg-slate-50/50 space-y-2">
-          <div className="flex items-center gap-3 p-2 bg-white rounded-xl border border-slate-200 shadow-xs">
-            <span className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-400 to-indigo-500 flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white uppercase">
-              AD
+        <div className="p-3 mt-auto border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20 space-y-2">
+          <div className="flex items-center justify-between p-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs gap-2 min-w-0">
+            <span className="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white uppercase">
+              {currentUser.name.substring(0, 2)}
             </span>
-            <div className="overflow-hidden min-w-0">
-              <p className="text-xs font-semibold truncate text-slate-800">Administrator</p>
-              <p className="text-[10px] text-slate-500 truncate">programjilanee@gmail.com</p>
+            {!isSidebarCollapsed && (
+              <div className="overflow-hidden min-w-0 flex-1 animate-fade-in">
+                <p className="text-xs font-bold truncate text-slate-800 dark:text-slate-200">{currentUser.name}</p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate capitalize font-semibold">{currentUser.role} Account</p>
+              </div>
+            )}
+            {!isSidebarCollapsed && (
+              <button 
+                onClick={handleLogout}
+                title="Log Out Session"
+                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg text-slate-400 transition shrink-0 cursor-pointer"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {!isSidebarCollapsed && (
+            <div className="flex items-center justify-between text-[9px] text-slate-400 font-bold px-1 uppercase animate-fade-in">
+              <span>SLA: Optimal</span>
+              <span className="flex items-center gap-1.5 text-emerald-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                Active
+              </span>
             </div>
-          </div>
-          <div className="flex items-center justify-between text-[9px] text-slate-400 font-bold px-1 uppercase">
-            <span>SLA: Optimal</span>
-            <span className="flex items-center gap-1.5 text-emerald-600">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              Active
-            </span>
-          </div>
+          )}
         </div>
       </aside>
 
       {/* Main Container */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-slate-50 dark:bg-slate-950">
         
         {/* Top Header bar */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 relative z-10">
-          <div className="flex items-center gap-3">
-            <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-              {sidebarItems.find(i => i.id === activeTab)?.label}
-            </h2>
+        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 sm:px-8 shrink-0 relative z-10 transition-colors duration-200">
+          
+          {/* Breadcrumb Trail & Search trigger */}
+          <div className="flex items-center gap-6 min-w-0">
+            <div className="hidden lg:flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 font-semibold shrink-0">
+              <span>Work OS</span>
+              <ChevronRight className="h-3 w-3" />
+              <span className="text-slate-700 dark:text-slate-300 capitalize font-bold">
+                {sidebarItems.find(i => i.id === activeTab)?.label}
+              </span>
+            </div>
+
+            {/* Global Search shortcut button */}
+            <button 
+              onClick={() => setIsCommandPaletteOpen(true)}
+              className="flex items-center gap-3 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 rounded-xl transition duration-150 text-xs text-left w-52 sm:w-64 cursor-pointer"
+            >
+              <Search className="h-4 w-4 text-slate-400" />
+              <span className="flex-1 text-slate-500 dark:text-slate-400">Search Workspace...</span>
+              <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-bold font-mono text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xs">
+                Ctrl+K
+              </kbd>
+            </button>
           </div>
 
           {/* Quick Actions Panel */}
           <div className="flex items-center gap-4">
+            
+            {/* Real-time Clock */}
+            <div className="hidden xl:flex flex-col items-end shrink-0">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300 font-mono">
+                {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </span>
+              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider font-mono">
+                {currentTime.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
+              </span>
+            </div>
+
+            <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 hidden xl:block"></div>
+
             {/* Sync trigger in header */}
             <button
               onClick={handleSyncYahoo}
               disabled={syncLoading}
-              className={`flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 hover:border-slate-300 text-slate-600 bg-white rounded-lg transition text-xs font-medium ${syncLoading ? 'bg-slate-50' : ''}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 rounded-xl transition text-xs font-semibold cursor-pointer ${syncLoading ? 'bg-slate-50 dark:bg-slate-900' : ''}`}
             >
               <RefreshCw className={`h-3.5 w-3.5 text-slate-400 ${syncLoading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">{syncLoading ? 'Syncing Yahoo...' : 'Yahoo Mail Sync'}</span>
+              <span className="hidden sm:inline">{syncLoading ? 'Syncing...' : 'Sync Mail'}</span>
+            </button>
+
+            {/* Theme Toggle Button */}
+            <button
+              onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+              title={`Switch to ${resolvedTheme === 'dark' ? 'Light' : 'Dark'} Mode`}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer border border-transparent dark:border-slate-800"
+            >
+              {resolvedTheme === 'dark' ? <Sun className="h-4.5 w-4.5 text-amber-500" /> : <Moon className="h-4.5 w-4.5 text-blue-600" />}
             </button>
 
             {/* Notifications Bell */}
             <div className="relative">
               <button 
                 onClick={() => setShowNotificationTray(!showNotificationTray)}
-                className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition relative"
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition relative cursor-pointer border border-transparent dark:border-slate-800"
               >
-                <Bell className="h-5 w-5" />
+                <Bell className="h-4.5 w-4.5" />
                 {notifications.filter(n => !n.read).length > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-blue-500 border-2 border-white rounded-full"></span>
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
                 )}
               </button>
 
               {/* Push Alerts Drawer */}
               {showNotificationTray && (
-                <div className="absolute right-0 mt-2 w-80 bg-white border border-slate-200 shadow-xl rounded-xl p-4 space-y-3 z-30">
-                  <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                    <span className="text-xs font-bold text-slate-800">Operational Alerts</span>
+                <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl p-4 space-y-3.5 z-30 animate-fade-in">
+                  <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Operational Alerts</span>
                     <button 
                       onClick={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
-                      className="text-[10px] text-blue-600 font-bold hover:text-blue-700"
+                      className="text-[10px] text-blue-600 dark:text-blue-400 font-bold hover:underline"
                     >
                       Mark all read
                     </button>
@@ -426,17 +554,17 @@ export default function App() {
                       <div 
                         key={notif.id} 
                         onClick={() => markNotificationRead(notif.id)}
-                        className={`p-2.5 border border-slate-100 rounded-lg space-y-1 text-xs cursor-pointer hover:bg-slate-50 transition relative ${!notif.read ? 'bg-blue-50/10 border-l-4 border-blue-500' : ''}`}
+                        className={`p-2.5 border border-slate-100 dark:border-slate-800/80 rounded-xl space-y-1 text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850 transition relative ${!notif.read ? 'bg-blue-50/10 dark:bg-blue-950/10 border-l-4 border-blue-500' : ''}`}
                       >
                         <div className="flex justify-between items-start gap-2">
-                          <p className="font-bold text-slate-800">{notif.title}</p>
-                          <span className="text-[9px] text-slate-400 font-mono shrink-0">{notif.time}</span>
+                          <p className="font-bold text-slate-800 dark:text-slate-200 leading-snug">{notif.title}</p>
+                          <span className="text-[9px] text-slate-400 dark:text-slate-500 font-mono shrink-0">{notif.time}</span>
                         </div>
-                        <p className="text-slate-500 text-[11px] leading-relaxed">{notif.message}</p>
+                        <p className="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed">{notif.message}</p>
                         {!notif.read && (
-                          <span className="absolute right-2.5 bottom-2.5 text-[9px] text-blue-600 font-bold flex items-center gap-0.5">
+                          <span className="absolute right-2.5 bottom-2.5 text-[9px] text-blue-600 dark:text-blue-400 font-bold flex items-center gap-0.5">
                             <Check className="h-3 w-3" />
-                            Read
+                            Marked Read
                           </span>
                         )}
                       </div>
@@ -446,139 +574,184 @@ export default function App() {
               )}
             </div>
 
+            {/* Collapsible Sidekick trigger */}
+            <button 
+              onClick={() => setIsAiPanelOpen(!isAiPanelOpen)}
+              title="Toggle AI Sidekick Copilot"
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer border border-transparent dark:border-slate-800"
+            >
+              <Sparkles className={`h-4.5 w-4.5 ${isAiPanelOpen ? 'text-blue-600 dark:text-blue-400 fill-current' : ''}`} />
+            </button>
+
             {/* Profile Avatar */}
-            <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
-              <span className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold border border-blue-100">
-                AD
+            <div className="flex items-center gap-2 border-l border-slate-200 dark:border-slate-800 pl-4 shrink-0">
+              <span className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/60 text-blue-600 dark:text-blue-300 flex items-center justify-center text-xs font-bold border border-blue-100 dark:border-blue-800 uppercase shrink-0">
+                {currentUser.name.substring(0, 2)}
               </span>
-              <span className="hidden md:inline text-xs font-bold text-slate-700">Administrator</span>
+              <span className="hidden md:inline text-xs font-bold text-slate-700 dark:text-slate-300 capitalize">{currentUser.name}</span>
             </div>
           </div>
         </header>
 
         {/* Workspace Dynamic Viewer */}
-        <main className="flex-1 overflow-hidden p-8">
-          {activeTab === 'dashboard' && (
-            <Dashboard 
-              stats={stats}
-              activities={activities}
-              meetings={meetings}
-              onAction={handleDashboardAction}
-              onNavigate={handleDeepNavigate}
-              syncLoading={syncLoading}
-              onSync={handleSyncYahoo}
-              emails={emails}
-              tasks={tasks}
-              projects={projects}
-              customers={customers}
-              rfqs={rfqs}
-              drawings={drawings}
-              quotations={quotations}
-              invoices={invoices}
-              pos={pos}
-            />
-          )}
+        <div className="flex-1 flex overflow-hidden">
+          <main className="flex-1 overflow-hidden p-6 sm:p-8">
+            {activeTab === 'dashboard' && (
+              <Dashboard 
+                stats={stats}
+                activities={activities}
+                meetings={meetings}
+                onAction={handleDashboardAction}
+                onNavigate={handleDeepNavigate}
+                syncLoading={syncLoading}
+                onSync={handleSyncYahoo}
+                emails={emails}
+                tasks={tasks}
+                projects={projects}
+                customers={customers}
+                rfqs={rfqs}
+                drawings={drawings}
+                quotations={quotations}
+                invoices={invoices}
+                pos={pos}
+              />
+            )}
 
-          {activeTab === 'email' && (
-            <EmailCenter 
-              emails={emails}
-              selectedEmailId={selectedEmailId}
-              onSelectEmail={setSelectedEmailId}
-              onUpdateEmail={handleUpdateEmail}
-              onForceAnalyze={handleForceAnalyze}
-              onNavigate={handleDeepNavigate}
-              onSync={handleSyncYahoo}
-              syncLoading={syncLoading}
-              tasks={tasks}
-              projects={projects}
-            />
-          )}
+            {activeTab === 'whatsapp' && (
+              <WhatsappCenter 
+                emails={emails}
+                tasks={tasks}
+                projects={projects}
+                customers={customers}
+                rfqs={rfqs}
+                drawings={drawings}
+                quotations={quotations}
+                invoices={invoices}
+                pos={pos}
+                onNavigate={handleDeepNavigate}
+              />
+            )}
 
-          {activeTab === 'tasks' && (
-            <TaskManager 
-              tasks={tasks}
-              customers={customers}
-              projects={projects}
-              onCreateTask={handleCreateTask}
-              onUpdateTask={handleUpdateTask}
-              onDeleteTask={handleDeleteTask}
-              onNavigate={handleDeepNavigate}
-            />
-          )}
+            {activeTab === 'email' && (
+              <EmailCenter 
+                emails={emails}
+                selectedEmailId={selectedEmailId}
+                onSelectEmail={setSelectedEmailId}
+                onUpdateEmail={handleUpdateEmail}
+                onForceAnalyze={handleForceAnalyze}
+                onNavigate={handleDeepNavigate}
+                onSync={handleSyncYahoo}
+                syncLoading={syncLoading}
+                tasks={tasks}
+                projects={projects}
+              />
+            )}
 
-          {activeTab === 'projects' && (
-            <Projects 
-              projects={projects}
-              customers={customers}
-              selectedProjectId={selectedProjectId}
-              onSelectProject={setSelectedProjectId}
-              onCreateProject={handleCreateProject}
-              onNavigate={handleDeepNavigate}
-            />
-          )}
+            {activeTab === 'tasks' && (
+              <TaskManager 
+                tasks={tasks}
+                customers={customers}
+                projects={projects}
+                onCreateTask={handleCreateTask}
+                onUpdateTask={handleUpdateTask}
+                onDeleteTask={handleDeleteTask}
+                onNavigate={handleDeepNavigate}
+              />
+            )}
 
-          {activeTab === 'engineering' && (
-            <EngineeringWorkspace 
-              customers={customers}
-              projects={projects}
-              onNavigate={handleDeepNavigate}
-            />
-          )}
+            {activeTab === 'projects' && (
+              <Projects 
+                projects={projects}
+                customers={customers}
+                selectedProjectId={selectedProjectId}
+                onSelectProject={setSelectedProjectId}
+                onCreateProject={handleCreateProject}
+                onNavigate={handleDeepNavigate}
+              />
+            )}
 
-          {activeTab === 'customers' && (
-            <Customers 
-              customers={customers}
-              selectedCustomerId={selectedCustomerId}
-              onSelectCustomer={setSelectedCustomerId}
-              onCreateCustomer={handleCreateCustomer}
-              onNavigate={handleDeepNavigate}
-            />
-          )}
+            {activeTab === 'engineering' && (
+              <EngineeringWorkspace 
+                customers={customers}
+                projects={projects}
+                onNavigate={handleDeepNavigate}
+              />
+            )}
 
-          {activeTab === 'calendar' && (
-            <CalendarView 
-              meetings={meetings}
-              tasks={tasks}
-              customers={customers}
-              onCreateMeeting={handleCreateMeeting}
-            />
-          )}
+            {activeTab === 'customers' && (
+              <Customers 
+                customers={customers}
+                selectedCustomerId={selectedCustomerId}
+                onSelectCustomer={setSelectedCustomerId}
+                onCreateCustomer={handleCreateCustomer}
+                onNavigate={handleDeepNavigate}
+              />
+            )}
 
-          {activeTab === 'notes' && (
-            <NotesHub 
-              customers={customers}
-              projects={projects}
-            />
-          )}
+            {activeTab === 'calendar' && (
+              <CalendarView 
+                meetings={meetings}
+                tasks={tasks}
+                customers={customers}
+                onCreateMeeting={handleCreateMeeting}
+              />
+            )}
 
-          {activeTab === 'files' && (
-            <FilesVault 
-              customers={customers}
-              projects={projects}
-            />
-          )}
+            {activeTab === 'notes' && (
+              <NotesHub 
+                customers={customers}
+                projects={projects}
+              />
+            )}
 
-          {activeTab === 'automations' && (
-            <Automations />
-          )}
+            {activeTab === 'files' && (
+              <FilesVault 
+                customers={customers}
+                projects={projects}
+              />
+            )}
 
-          {activeTab === 'logs' && (
-            <SystemLogs />
-          )}
+            {activeTab === 'automations' && (
+              <Automations />
+            )}
 
-          {activeTab === 'assistant' && (
-            <AiAssistant 
-              initialPrompt={tabParam?.initPrompt || null}
-              onNavigate={handleDeepNavigate}
-            />
-          )}
+            {activeTab === 'logs' && (
+              <SystemLogs />
+            )}
 
-          {activeTab === 'settings' && (
-            <SettingsPanel />
-          )}
-        </main>
+            {activeTab === 'assistant' && (
+              <AiAssistant 
+                initialPrompt={tabParam?.initPrompt || null}
+                onNavigate={handleDeepNavigate}
+              />
+            )}
+
+            {activeTab === 'settings' && (
+              <SettingsPanel />
+            )}
+          </main>
+
+          {/* Collapsible Right AI Panel */}
+          <RightAiPanel 
+            isOpen={isAiPanelOpen} 
+            onToggle={() => setIsAiPanelOpen(!isAiPanelOpen)} 
+            onNavigate={handleDeepNavigate} 
+          />
+        </div>
 
       </div>
+
+      {/* Ctrl + K Command Palette Overlay */}
+      <CommandPalette 
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onNavigate={handleDeepNavigate}
+        emails={emails}
+        tasks={tasks}
+        projects={projects}
+        customers={customers}
+      />
+
     </div>
   );
 }

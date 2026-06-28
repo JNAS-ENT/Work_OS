@@ -4,7 +4,8 @@ import {
   User, Customer, Email, Project, Task, Note, 
   Activity, Notification, Meeting, FileItem, 
   AutomationWorkflow, SystemLog, AiAnalysis, Attachment,
-  Rfq, Drawing, Quotation, PurchaseOrder, Invoice, DrawingRevision, Ecr
+  Rfq, Drawing, Quotation, PurchaseOrder, Invoice, DrawingRevision, Ecr,
+  UserSession, AuditLog, MailAccount, RolePermission
 } from '../src/types';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -31,6 +32,10 @@ export interface DatabaseSchema {
   invoices: Invoice[];
   revisions: DrawingRevision[];
   ecrs: Ecr[];
+  userSessions: UserSession[];
+  auditLogs: AuditLog[];
+  mailAccounts: MailAccount[];
+  rolePermissions: RolePermission[];
 }
 
 export function readDb(): DatabaseSchema {
@@ -767,9 +772,176 @@ function getSeedData(): DatabaseSchema {
   const users: User[] = [
     {
       id: 'usr_1',
-      name: 'Lead Engineer',
+      name: 'Admin Jilanee',
       email: 'programjilanee@gmail.com',
-      role: 'admin'
+      role: 'admin',
+      password: 'adminpassword',
+      status: 'Active',
+      department: 'IT & Security',
+      designation: 'Principal Architect',
+      company: 'Geometric Suite',
+      timezone: 'UTC',
+      language: 'English',
+      themePreference: 'dark',
+      createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      connectedMailAccounts: ['mail_gmail_1', 'mail_yahoo_1']
+    },
+    {
+      id: 'usr_2',
+      name: 'Sarah (Operations Manager)',
+      email: 'sarah.mgr@workos.com',
+      role: 'manager',
+      password: 'managerpassword',
+      status: 'Active',
+      department: 'Commercial Ops',
+      designation: 'Operations Director',
+      company: 'Geometric Suite',
+      timezone: 'America/New_York',
+      language: 'English',
+      themePreference: 'system',
+      createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+      connectedMailAccounts: ['mail_gmail_1']
+    },
+    {
+      id: 'usr_3',
+      name: 'Alex (Technical Engineer)',
+      email: 'alex.eng@workos.com',
+      role: 'user',
+      password: 'userpassword',
+      status: 'Active',
+      department: 'Engineering',
+      designation: 'CAD Specialist',
+      company: 'Geometric Suite',
+      timezone: 'Europe/London',
+      language: 'English',
+      themePreference: 'light',
+      createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+      connectedMailAccounts: []
+    },
+    {
+      id: 'usr_4',
+      name: 'Guest Inspector',
+      email: 'guest.viewer@external.com',
+      role: 'viewer',
+      password: 'guestpassword',
+      status: 'Active',
+      department: 'External Audit',
+      designation: 'Lead Auditor',
+      company: 'Apex Industrial',
+      timezone: 'Europe/Paris',
+      language: 'French',
+      themePreference: 'light',
+      createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+      connectedMailAccounts: []
+    }
+  ];
+
+  const mailAccounts: MailAccount[] = [
+    {
+      id: 'mail_gmail_1',
+      name: 'Personal Gmail',
+      email: 'programjilanee@gmail.com',
+      provider: 'gmail',
+      syncStatus: 'success',
+      lastSyncedAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+      storageUsed: '4.8 GB of 15 GB',
+      isDefault: true,
+      isActive: true
+    },
+    {
+      id: 'mail_yahoo_1',
+      name: 'Yahoo Corporate',
+      email: 'info@geometricsuite.yahoo',
+      provider: 'yahoo',
+      syncStatus: 'success',
+      lastSyncedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+      storageUsed: '12.5 GB of 100 GB',
+      isDefault: false,
+      isActive: true
+    },
+    {
+      id: 'mail_outlook_1',
+      name: 'Outlook Engineering',
+      email: 'engineering@geometricsuite.outlook',
+      provider: 'outlook',
+      syncStatus: 'idle',
+      storageUsed: '0 GB of 50 GB',
+      isDefault: false,
+      isActive: false
+    }
+  ];
+
+  const rolePermissions: RolePermission[] = [
+    {
+      id: 'perm_1',
+      roleName: 'admin',
+      permissions: ['view_dashboard', 'manage_users', 'manage_roles', 'view_audit_logs', 'sync_emails', 'manage_tasks', 'manage_projects', 'manage_customers', 'manage_engineering', 'manage_automations', 'view_logs', 'ai_assistant']
+    },
+    {
+      id: 'perm_2',
+      roleName: 'manager',
+      permissions: ['view_dashboard', 'sync_emails', 'manage_tasks', 'manage_projects', 'manage_customers', 'manage_engineering', 'manage_automations', 'ai_assistant']
+    },
+    {
+      id: 'perm_3',
+      roleName: 'user',
+      permissions: ['view_dashboard', 'sync_emails', 'manage_tasks', 'manage_projects', 'manage_customers', 'manage_engineering', 'ai_assistant']
+    },
+    {
+      id: 'perm_4',
+      roleName: 'viewer',
+      permissions: ['view_dashboard', 'view_projects', 'view_tasks', 'view_customers', 'view_engineering']
+    },
+    {
+      id: 'perm_5',
+      roleName: 'guest',
+      permissions: ['view_dashboard']
+    }
+  ];
+
+  const userSessions: UserSession[] = [
+    {
+      id: 'sess_1',
+      userId: 'usr_1',
+      device: 'MacBook Pro 16"',
+      browser: 'Google Chrome',
+      ipAddress: '192.168.1.45',
+      loginTime: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+      lastActiveTime: new Date().toISOString(),
+      status: 'Active'
+    },
+    {
+      id: 'sess_2',
+      userId: 'usr_1',
+      device: 'iPhone 15 Pro Max',
+      browser: 'Safari Mobile',
+      ipAddress: '172.56.21.109',
+      loginTime: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      lastActiveTime: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+      status: 'Active'
+    }
+  ];
+
+  const auditLogs: AuditLog[] = [
+    {
+      id: 'aud_1',
+      userId: 'usr_1',
+      userName: 'Admin Jilanee',
+      action: 'LOGIN',
+      details: 'User authenticated successfully via credentials token from browser cache.',
+      ipAddress: '192.168.1.45',
+      device: 'MacBook Pro 16"',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+    },
+    {
+      id: 'aud_2',
+      userId: 'usr_1',
+      userName: 'Admin Jilanee',
+      action: 'SETTINGS_UPDATE',
+      details: 'Updated global IMAP poll interval setting to 5 minutes.',
+      ipAddress: '192.168.1.45',
+      device: 'MacBook Pro 16"',
+      timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString()
     }
   ];
 
@@ -935,6 +1107,10 @@ function getSeedData(): DatabaseSchema {
     purchaseOrders,
     invoices,
     revisions,
-    ecrs
+    ecrs,
+    userSessions,
+    auditLogs,
+    mailAccounts,
+    rolePermissions
   };
 }
